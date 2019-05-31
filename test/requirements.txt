@@ -1,0 +1,6 @@
+# These are the requirements to run the Python test suite. Install these with:
+# `pip3 install -r requirements.txt`
+
+nose
+requests
+json

@@ -1,0 +1,19 @@
+* Transport Layer Test Package
+
+In order to test HTTP server, requests should be made from *outside Emacs*. To
+do this, Python scripts are used. To manage the Python-based tests, I leverage
+the testing facilities of Nose.
+
+** Running the Tests
+
+An Elisp wrapper is provided to spin up a test server and run the Python
+tests against it automatically.
+
+To run the test suite, load the file "test-http-rpc-server.el" and call the
+function `hrpc-run-external-tests'. This function can be called interactively.
+It will spin up the test server and run the Python tests against it.
+
+Note that these tests do not run in a virtualized Emacs like Cask tests do. They
+will modify your JSON-RPC server settings. It is recommended that you reload
+your user configuration after running them if you wish to use the JSON-RPC
+server.
