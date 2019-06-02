@@ -219,6 +219,25 @@ fixed port was used, but it can still be useful to reduce setup."
     (kill-current-buffer)))
 
 
+(defun hrpc--find-free-port (host)
+  "Get a dynamically allocated port. This port should be free.
+
+Note that using this method will probably produce a small chance
+of a race condition. The port could theoretically be claimed
+between this method returning and another method trying to use
+the port. The chance of this happening is small, but it should
+still be protected against."
+  (let* ((free-port-process (make-network-process
+                             :name "*hrpc-free-port-finding-service*"
+                             :host host
+                             :service 0
+                             :server t
+                             :family 'ipv4))
+         (port (process-contact free-port-process :service)))
+    (delete-process free-port-process)
+    port))
+
+
 (defun hrpc--erase-port-file ()
   "Erase the port information file, if it exists."
   (if (file-exists-p hrpc--port-number-temp-file)
@@ -226,7 +245,7 @@ fixed port was used, but it can still be useful to reduce setup."
 
 
 (cl-defun hrpc-start-server (&key
-                             (port "0")
+                             (port 0)
                              username
                              password
                              (publish-port t))
@@ -274,25 +293,61 @@ running."
                 "Please call `hrpc-stop-server' before starting another."))
   (when (or username password)
     (error "Auth not currently implemented"))
-  ;; Get a dynamic port. Please note, this CAN PRODUCE A RACE CONDITION if the
-  ;; port is grabbed between this check and starting the server.
-  ;;
-  ;; This is necessary because Elnode stores a server started on port 0, in...
-  ;; The port 0 slot. So you can only start one server on port 0.
-  ;;
-  ;; FIXME: Fix dynamic port number race condition. Try to start multiple times?
-  (when (member port '("0" 0 t))
-    (setq port (elnode-find-free-service)))
+  ;; We have to handle dynamic ports differently.
+  (if (member port '("0" 0 t))
+      ;; Get a dynamic port. Please note, this CAN PRODUCE A RACE CONDITION if the
+      ;; port is grabbed between this check and starting the server.
+      ;;
+      ;; This is necessary because Elnode stores a server started on port 0, in...
+      ;; The port 0 slot. So you can only start one server on port 0.
+      ;;
+      ;; Because this can produce a race condition, we try multiple times just in
+      ;; case that race condition pops up.
+      (let (
+            ;; Try to claim a dynamic port this many times. The chance of the race
+            ;; condition occurring 500 times is infinitesimally small.
+            (max-attempts 500))
+        (unless (catch 'server-started
+                  (dotimes (i max-attempts)
+                    (setq port (hrpc--find-free-port "localhost"))
+                    (condition-case err
+                        ;; Try and start the server with these parameters.
+                        ;;
+                        ;; If the port is taken, it will throw a file-error. If
+                        ;; Elnode already has a server running on this port (it
+                        ;; shouldn't, but just in case), the server creation
+                        ;; process will fail silently, and return nil. Handle
+                        ;; both cases.
+                        (when (elnode-start
+                               'hrpc--handle-request
+                               :port port
+                               :host "localhost")
+                          ;; If the server was started successfully, we're done. We
+                          ;; have a server - break out and continue.
+                          (throw 'server-started t))
+                      (file-error nil)
+                      (error
+                       (signal (car err) (cdr err)))
+                      )
+                    (throw 'server-started nil)))
+          ;; If the server could not be started after many retries, we just raise an error.
+          (error "%s" (concat (format "Tried to start on a free port %s times."
+                                      max-attempts)
+                              " Failed each time. Server could not be started."))))
+    (when (alist-get port elnode-server-socket)
+      (error "Elnode already has a server running on this port."))
+    (elnode-start
+     'hrpc--handle-request
+     :port port
+     :host "localhost"))
   (setq hrpc--server
-        (elnode-start
-         'hrpc--handle-request
-         :port port
-         :host "localhost"))
+        `((port . ,port)
+          (elnode-process . ,(alist-get port elnode-server-socket))))
   (add-hook 'kill-emacs-hook 'hrpc--stop-server-safe)
-  (let ((port (hrpc--server-port hrpc--server)))
-    (message "JSON-RPC server running on port %s" port)
-    (when publish-port
-      (hrpc--publish-port port))))
+  (message "JSON-RPC server running on port %s" port)
+  (when publish-port
+    (hrpc--publish-port port))
+  hrpc--server)
 
 
 (defun hrpc-stop-server ()
@@ -304,7 +359,7 @@ This method will fail if no server is running."
   (hrpc--erase-port-file)
   (unless hrpc--server
     (error "Server not running."))
-  (elnode-stop (hrpc--server-port hrpc--server))
+  (elnode-stop (alist-get 'port hrpc--server))
   (setq hrpc--server nil))
 
 
