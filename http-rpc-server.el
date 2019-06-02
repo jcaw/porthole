@@ -11,7 +11,15 @@
 
 
 (defvar hrpc--server nil
-  "The currently running hrpc server.")
+  "The currently running hrpc server.
+
+If a server is running, this will be an alist with the following
+structure:
+
+  '((port . server-port)
+    (elnode-process . the-underlying-elnode-server-process))
+
+If not, it will be nil.")
 
 
 (define-error 'hrpc-http-error "An error occurred processing the HTTP request")
