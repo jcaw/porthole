@@ -2,6 +2,11 @@
 (require 'json-rpc-server)
 
 
+;; We have to monkeypatch Elnode before using it on Emacs 26, possibly other
+;; Emacs too.
+(require 'http-rpc-server-elnode-monkeypatch)
+
+
 ;;; Code
 
 
@@ -17,8 +22,6 @@
   "The request was invalid"
   'hrpc-http-error)
 
-(define-error 'hrpc-missing-key "The specified key could not be found")
-
 
 (defun hrpc-xor (arg1 arg2)
   "Exclusive or of two parameters, `ARG1' and `ARG2'.
@@ -27,44 +30,6 @@ This is not a bitwise comparison. It uses the truthiness of the
 arguments to evaluate the result."
   (and (or arg1 arg2)
        (not (and arg1 arg2))))
-
-
-(defun hrpc--extract-post-content (request)
-  "Manually extract the content from a `ws-request'.
-
-`web-server' doesn't add content to the response unless it's of a
-specific type. This is a hack to extract it manually."
-  ;; TODO: Ensure request is a POST
-
-  ;; This method relies on pending having the full request content.
-  (with-slots (pending) request
-    ;; TODO: Handle each way things might be malformed here
-    (let* ((content-length-string (condition-case nil
-                                      (hrpc--extract-header request :CONTENT-LENGTH)
-                                    (error nil))))
-      (when (eq nil content-length-string)
-        (signal 'hrpc-malformed-http-request
-                "No `Content-Length` parameter"))
-      (let ((content-length (condition-case nil
-                                (string-to-number content-length-string)
-                              (error nil)))
-            (headers-end (string-match "\r\n\r\n" pending)))
-        (unless (integerp content-length)
-          (signal 'hrpc-malformed-http-request
-                  "`Content-Length` was not an integer"))
-        (when (eq nil headers-end)
-          (signal 'hrpc-malformed-http-request
-                  "No double line breaks found in POST request. Content not acceptable"))
-        (let* (
-               ;; Have to offset the content start. It will be four characters
-               ;; after the end of the headers because of the double newline.
-               (content-start (+ 4 headers-end))
-               (content-end (+ content-start content-length)))
-          (condition-case nil
-              (substring pending content-start content-end)
-            (error
-             (signal 'hrpc-malformed-http-request
-                     "POST content was shorter than `Content-Length` parameter"))))))))
 
 
 (defun hrpc--case-insensitive-comparison (string1 string2)
@@ -76,32 +41,87 @@ non-string is supplied."
        (string= (downcase string1) (downcase string2))))
 
 
-(defun hrpc--extract-header (request header-key)
-  "Extract a header named by `HEADER-KEY'."
-  (with-slots (headers) request
-    (condition-case nil
-        (cdr (assoc header-key headers))
-      (signal 'hrpc-missing-key "Key %s could not be found in headers" header-key))))
+(defun hrpc--similar-keys (key1 key2)
+  "Are two keys the same at a fundamental level?
+
+This is a utility function for `hrpc-alist-get'. It compares
+keys. Symbol keys can match string keys, and all keys are
+compared case-insensitively.
+
+See `htpc-alist-get' for usage examples."
+  ;; Can only compare strings and symbols
+  (when (and (or (symbolp key1) (stringp key1))
+             (or (symbolp key2) (stringp key2)))
+    ;; Convert symbols to strings before comparison
+    (when (symbolp key1)
+      (setq key1 (format "%s" key1)))
+    (when (symbolp key2)
+      (setq key2 (format "%s" key2)))
+    ;; Compare the two strings
+    (hrpc--case-insensitive-comparison key1 key2)))
 
 
-(defun hrpc--send-400 (request message)
-  (with-slots (process) request
-    (ws-response-header process 400 '("Content-type" . "html/plain"))
-    (process-send-string process message)))
+(defun hrpc-alist-get (key alist)
+  "Like `alist-get', but much more flexible.
+
+`KEY' is the key to query.
+`ALIST' is the alist to search.
+
+Will match symbols against strings. Will also match strings
+case-insensitively.
+
+For example:
+
+  - The symbol 'key will match the string \"key\"
+
+  - The string \"key\" match the string \"Key\"
+
+  - The symbol 'key will match the string \"KEY\"
+
+  - The symbol 'key will match the symbol 'KEY
+
+  - The symbol 'key will NOT match the symbol 'keys"
+  (let ((pair (assoc key alist 'hrpc--similar-keys)))
+    (and pair
+         (eq (type-of pair) 'cons)
+         (cdr pair))))
 
 
-(defun hrpc--handle-request (request)
+(defun hrpc--send-400 (httpcon message)
+  (elnode-send-400 httpcon message))
+
+
+(defun hrpc--extract-content (httpcon)
+  "Extract the body of an HTTP request.
+
+Ordinarily, Elnode provides no method to extract the raw content
+from an HTTP request. This is an extension function to allow
+this.
+
+This is ripped from `elnode--http-post-to-alist', extracted into
+its own function to enable custom body handling."
+  (with-current-buffer (process-buffer httpcon)
+    (buffer-substring
+     ;; we might have to add 2 to this because of trailing \r\n
+     (process-get httpcon :elnode-header-end)
+     (point-max))))
+
+
+(defun hrpc--handle-request (httpcon)
   "Handle a JSON-RPC request.
 
 This method extracts the underlying JSON-RPC request and passes
 it to the RPC layer to be executed. It then responds to the
 client with the result."
-  (with-slots (process headers context) request
-    (condition-case err
+  (condition-case err
+      (let ((headers (elnode-http-headers httpcon)))
+        (message "Headers: \n%s" headers)
+        (message "Process Plist: \n%s" (process-plist httpcon))
         (progn
-          (let ((content-type context))
+          (let ((content-type (hrpc-alist-get "Content-Type" headers)))
             (unless content-type
-              (signal 'hrpc-invalid-http-request (format "No `Content-Type` provided.")))
+              (signal 'hrpc-invalid-http-request
+                      (format "No `Content-Type` provided.")))
             (unless (hrpc--case-insensitive-comparison
                      (format "%s" content-type)
                      "application/json")
@@ -109,16 +129,22 @@ client with the result."
                       (format
                        "`Content-Type` should be application/json. Was: %s"
                        content-type))))
-          (let* ((content (hrpc--extract-post-content request))
-                 (hrpc-response (jrpc-handle content)))
-            (ws-response-header process 200 '("Content-type" . "application/json"))
-            (process-send-string process hrpc-response)))
-      ((hrpc-malformed-http-request hrpc-invalid-http-request)
-       (hrpc--send-400 request (cdr err))))))
+          (let ((content (hrpc--extract-content httpcon)))
+            (unless content
+              (signal 'hrpc-invalid-http-request
+                      "Content could not be extracted from the request."))
+            (let ((hrpc-response (jrpc-handle content)))
+              (elnode-http-start httpcon 200 '("Content-Type" . "application/json"))
+              (elnode-http-return httpcon hrpc-response)))))
+    (hrpc-http-error
+     (hrpc--send-400 httpcon (cdr err)))
+    (error
+     (elnode-send-500 (format "An internal error occurred. Error: %s"
+                              err)))))
 
 
-(defun hrpc--server-port (ws-server-instance)
-  "Get the actual port a `ws-server' is running on.
+(defun hrpc--server-port (elnode-server-instance)
+  "Get the actual port an `elnode-server' is running on.
 
 By default, `ws-server' objects store the port which was given as
 input to create the server. This may not actually be the port the
@@ -129,28 +155,8 @@ allocated a specific port.
 
 This method bypasses the flawed `ws-server' implementation and
 extract the actual port from the underlying network process."
-  (process-contact (oref ws-server-instance process) :service))
-
-
-(defun hrpc--auth-handler (&optional username password)
-  "Create a request handler that requires authentication.
-
-This handler works the same as `hrpc--handle-request', but it
-requires Basic Access Authentication for the request to be
-processed.
-
-`USERNAME' and `PASSWORD' are the authentication credentials to
-use."
-  (when (and username (not password))
-    (setq password ""))
-  (when (and password (not username))
-    (setq username ""))
-  (ws-with-authentication
-   'hrpc--handle-request
-   ;; Build an alist with just this user
-   (list (cons username password)))
-  ;; TODO: Meaningful responses on failed authentication, internal errors, etc.
-  )
+  ;; (process-contact (oref ws-server-instance process) :service)
+  (warn "Port getting not implemented"))
 
 
 (defun hrpc--on-linux ()
@@ -266,17 +272,27 @@ running."
   (when hrpc--server
     (user-error "RPC server already running for this instance of Emacs. "
                 "Please call `hrpc-stop-server' before starting another."))
+  (when (or username password)
+    (error "Auth not currently implemented"))
+  ;; Get a dynamic port. Please note, this CAN PRODUCE A RACE CONDITION if the
+  ;; port is grabbed between this check and starting the server.
+  ;;
+  ;; This is necessary because Elnode stores a server started on port 0, in...
+  ;; The port 0 slot. So you can only start one server on port 0.
+  ;;
+  ;; FIXME: Fix dynamic port number race condition. Try to start multiple times?
+  (when (member port '("0" 0 t))
+    (setq port (elnode-find-free-service)))
   (setq hrpc--server
-        (ws-start
-         (if (or username password)
-             (hrpc--auth-handler username password)
-           'hrpc--handle-request)
-         port))
-  (add-hook 'kill-emacs-hook 'hrpc-stop-server)
+        (elnode-start
+         'hrpc--handle-request
+         :port port
+         :host "localhost"))
+  (add-hook 'kill-emacs-hook 'hrpc--stop-server-safe)
   (let ((port (hrpc--server-port hrpc--server)))
     (message "JSON-RPC server running on port %s" port)
     (when publish-port
-     (hrpc--publish-port port))))
+      (hrpc--publish-port port))))
 
 
 (defun hrpc-stop-server ()
@@ -288,7 +304,7 @@ This method will fail if no server is running."
   (hrpc--erase-port-file)
   (unless hrpc--server
     (error "Server not running."))
-  (ws-stop hrpc--server)
+  (elnode-stop (hrpc--server-port hrpc--server))
   (setq hrpc--server nil))
 
 
