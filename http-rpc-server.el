@@ -1,3 +1,4 @@
+(require 'cl-lib)
 (require 'elnode)
 (require 'json-rpc-server)
 
@@ -10,16 +11,21 @@
 ;;; Code
 
 
-(defvar hrpc--server nil
+(defvar hrpc--current-server nil
   "The currently running hrpc server.
 
-If a server is running, this will be an alist with the following
-structure:
+If the server is running, this will be an `hrpc--server' object.
+If not, it will be nil")
 
-  '((port . server-port)
-    (elnode-process . the-underlying-elnode-server-process))
 
-If not, it will be nil.")
+(cl-defstruct hrpc--server
+  "Structure representing an HTTP RPC server.
+
+This struct is intended to be used as a record of the running RPC
+server."
+  (port :read-only t)
+  (elnode-process :read-only t)
+  )
 
 
 (define-error 'hrpc-http-error "An error occurred processing the HTTP request")
@@ -296,7 +302,7 @@ specification, although the server will also tolerate JSON-RPC
 
 Note that this method will fail if the server is already
 running."
-  (when hrpc--server
+  (when hrpc--current-server
     (user-error "RPC server already running for this instance of Emacs. "
                 "Please call `hrpc-stop-server' before starting another."))
   (when (or username password)
@@ -348,14 +354,18 @@ running."
      'hrpc--handle-request
      :port port
      :host "localhost"))
-  (setq hrpc--server
-        `((port . ,port)
-          (elnode-process . ,(alist-get port elnode-server-socket))))
+  ;; If we've reached this point, the server has started successfully.
+  (setq hrpc--current-server
+        (make-hrpc--server
+         :port port
+         ;; We store the actual Elnode server process too, in case we wish to
+         ;; query it directly.
+         :elnode-process (alist-get port elnode-server-socket)))
   (add-hook 'kill-emacs-hook 'hrpc--stop-server-safe)
   (message "JSON-RPC server running on port %s" port)
   (when publish-port
     (hrpc--publish-port port))
-  hrpc--server)
+  hrpc--current-server)
 
 
 (defun hrpc-stop-server ()
@@ -365,10 +375,10 @@ This method will fail if no server is running."
   ;; Erase the port file up front, just in case it exists when the server is
   ;; down.
   (hrpc--erase-port-file)
-  (unless hrpc--server
+  (unless hrpc--current-server
     (error "Server not running."))
-  (elnode-stop (alist-get 'port hrpc--server))
-  (setq hrpc--server nil))
+  (elnode-stop (hrpc--server-port hrpc--current-server))
+  (setq hrpc--current-server nil))
 
 
 (defun hrpc--stop-server-safe (&rest _)
