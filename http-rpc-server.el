@@ -24,6 +24,8 @@ If not, it will be nil")
 This struct is intended to be used as a record of the running RPC
 server."
   (port :read-only t)
+  (username nil :read-only t)
+  (password nil :read-only t)
   (elnode-process :read-only t)
   )
 
@@ -358,6 +360,8 @@ running."
   (setq hrpc--current-server
         (make-hrpc--server
          :port port
+         :username username
+         :password password
          ;; We store the actual Elnode server process too, in case we wish to
          ;; query it directly.
          :elnode-process (alist-get port elnode-server-socket)))
