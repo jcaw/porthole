@@ -88,6 +88,11 @@ def _construct_json_rpc_request(method, params=None):
     return request
 
 
+# Boilerplate request. This is a valid JSON-RPC request - we can use it to test
+# many aspects of the HTTP server.
+SUM_REQUEST = _construct_json_rpc_request(method="+", params=[1, 2, 3])
+
+
 def _get_content_type(response):
     return response.headers["Content-type"]
 
@@ -172,8 +177,7 @@ def _extract_rpc_error(rpc_response):
 
 def test_acceptable_call():
     """Test a fully acceptable RPC call."""
-    request = _construct_json_rpc_request(method="+", params=[1, 2, 3])
-    response = requests.post(TEST_ADDRESS, json=request, auth=(USERNAME, PASSWORD))
+    response = requests.post(TEST_ADDRESS, json=SUM_REQUEST, auth=(USERNAME, PASSWORD))
     rpc_response = _extract_response_json(response)
     assert not "error" in rpc_response, rpc_response
     assert "result" in rpc_response, rpc_response
@@ -184,17 +188,15 @@ def test_acceptable_call():
 def test_no_authentication():
     """Test sending a request with no authentication info."""
     # This should be a valid JSON-RPC 2.0 request.
-    request = _construct_json_rpc_request(method="+", params=[1, 2, 3])
-    response = requests.post(TEST_ADDRESS, json=request)
+    response = requests.post(TEST_ADDRESS, json=SUM_REQUEST)
     _assert_authentication_required(response)
 
 
 def test_bad_authentication():
     """Test sending a request with invalid auth info."""
     # This should be a valid JSON-RPC 2.0 request.
-    request = _construct_json_rpc_request(method="+", params=[1, 2, 3])
     response = requests.post(
-        TEST_ADDRESS, json=request, auth=("wrong" + USERNAME, "wrong" + PASSWORD)
+        TEST_ADDRESS, json=SUM_REQUEST, auth=("wrong" + USERNAME, "wrong" + PASSWORD)
     )
     # `emacs-web-sever` gives 403 status codes to all invalid authentication
     # credentials (rather than just those that are valid, but have no access to
