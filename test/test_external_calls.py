@@ -113,6 +113,17 @@ def _extract_response_json(response):
     return rpc_response
 
 
+def _assert_response_code(response, code):
+    """Ensure the response has a specific error code.
+
+    If not, the error message will be informative.
+
+    """
+    assert (
+        response.status_code == code
+    ), "Wrong response status code. {} != {}. Response text:\n{}".format(
+        response.status_code, code, response.text
+    )
 
 
 def _assert_text_html(response):
@@ -132,7 +143,7 @@ def _assert_authentication_required(response):
 
     """
     # Response should indicate that authentication is required.
-    eq_(response.status_code, 401)
+    _assert_response_code(response, 401)
     _assert_text_html(response)
     # The content should reveal nothing.
     assert response.text.lower().strip() == "authentication required", response.text
@@ -230,4 +241,4 @@ def test_not_json_content():
     response = requests.post(TEST_ADDRESS, data=request, auth=(USERNAME, PASSWORD))
     # TODO: What do we want to do here? Should something like this return an
     # HTTP error, or a JSON error?
-    eq_(response.status_code, 400)
+    _assert_response_code(response, 400)
