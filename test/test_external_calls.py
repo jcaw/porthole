@@ -165,10 +165,6 @@ def _assert_invalid_credentials(response):
     assert response.text.lower().strip() == "invalid credentials", response.text
 
 
-# TODO: Verify JSON response structure.
-# TODO: Verify HTTP response codes.
-
-
 def _extract_rpc_error(rpc_response):
     """Extract the error from a JSON-RPC 2.0 response.
 
