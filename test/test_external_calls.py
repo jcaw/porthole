@@ -207,6 +207,16 @@ def test_no_authentication():
     _assert_authentication_required(response)
 
 
+def test_wrong_auth_method_digest():
+    # `http-rpc-server` only supports Basic Authentication at the moment.
+    # Passing the wrong authentication should trigger a 401 response.
+    auth = requests.auth.HTTPDigestAuth(USERNAME, PASSWORD)
+    response = requests.post(TEST_ADDRESS, json=SUM_REQUEST, auth=auth)
+    print(response.request.headers)
+    print(response.request.body)
+    _assert_authentication_required(response)
+
+
 def test_bad_authentication():
     """Test sending a request with invalid auth info."""
     # This should be a valid JSON-RPC 2.0 request.
