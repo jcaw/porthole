@@ -52,7 +52,10 @@ configuration."
   (let ((default-directory hrpc-transport-layer-test-dir))
     (async-shell-command
      (format "nosetests %s" "test_external_calls.py")
-     "*http-rpc-server nosetests*")))
+     "*http-rpc-server nosetests*"))
+  ;; TODO: Test server without authentication
+  ;; TODO: Test server on specific port
+  )
 
 
 ;; Tests will be run automatically when this buffer is evaluated directly.
