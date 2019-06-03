@@ -223,10 +223,6 @@ def test_bad_authentication():
     response = requests.post(
         TEST_ADDRESS, json=SUM_REQUEST, auth=("wrong" + USERNAME, "wrong" + PASSWORD)
     )
-    # `emacs-web-sever` gives 403 status codes to all invalid authentication
-    # credentials (rather than just those that are valid, but have no access to
-    # the service). This doesn't really matter for our purposes. Target 403 in
-    # the response.
     _assert_invalid_credentials(response)
 
 
