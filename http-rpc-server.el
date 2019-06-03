@@ -128,8 +128,6 @@ it to the RPC layer to be executed. It then responds to the
 client with the result."
   (condition-case err
       (let ((headers (elnode-http-headers httpcon)))
-        (message "Headers: \n%s" headers)
-        (message "Process Plist: \n%s" (process-plist httpcon))
         (progn
           (let ((content-type (hrpc-alist-get "Content-Type" headers)))
             (unless content-type
