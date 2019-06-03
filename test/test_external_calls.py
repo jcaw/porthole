@@ -244,6 +244,8 @@ def test_malformed_json():
 
 def test_not_json_content():
     """Test sending a request with content that isn't JSON."""
+    # The important part for this test is that the *header* isn't JSON.
+    # Requests will generate a different header from this content.
     request = "This is just some text content"
     response = requests.post(TEST_ADDRESS, data=request, auth=(USERNAME, PASSWORD))
     # TODO: What do we want to do here? Should something like this return an
