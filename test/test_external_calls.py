@@ -113,8 +113,11 @@ def _extract_response_json(response):
     return rpc_response
 
 
-def _assert_plaintext(response):
-    assert "text/plain" in _get_content_type(response), response.headers
+
+
+def _assert_text_html(response):
+    """Assert that the content is \"text/html\"."""
+    assert "text/html" in _get_content_type(response), response.headers
 
 
 def _assert_authentication_required(response):
@@ -128,9 +131,9 @@ def _assert_authentication_required(response):
     why we don't reply with a JSON-RPC response.
 
     """
-    _assert_plaintext(response)
     # Response should indicate that authentication is required.
     eq_(response.status_code, 401)
+    _assert_text_html(response)
     # The content should reveal nothing.
     assert response.text.lower().strip() == "authentication required", response.text
 
@@ -146,8 +149,8 @@ def _assert_invalid_credentials(response):
     why we don't reply with a JSON-RPC response.
 
     """
-    _assert_plaintext(response)
     eq_(response.status_code, 403)
+    _assert_text_html(response)
     # The content should reveal nothing.
     assert response.text.lower().strip() == "invalid credentials", response.text
 
