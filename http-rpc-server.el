@@ -65,16 +65,13 @@ keys. Symbol keys can match string keys, and all keys are
 compared case-insensitively.
 
 See `htpc-alist-get' for usage examples."
-  ;; Can only compare strings and symbols
-  (when (and (or (symbolp key1) (stringp key1))
-             (or (symbolp key2) (stringp key2)))
-    ;; Convert symbols to strings before comparison
-    (when (symbolp key1)
-      (setq key1 (format "%s" key1)))
-    (when (symbolp key2)
-      (setq key2 (format "%s" key2)))
-    ;; Compare the two strings
-    (hrpc--case-insensitive-comparison key1 key2)))
+  ;; Convert symbols to strings before comparison
+  (unless (stringp key1)
+    (setq key1 (format "%s" key1)))
+  (unless (stringp key2)
+    (setq key2 (format "%s" key2)))
+  ;; Compare the two strings
+  (hrpc--case-insensitive-comparison key1 key2))
 
 
 (defun hrpc-alist-get (key alist)
