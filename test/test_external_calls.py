@@ -160,7 +160,7 @@ def _assert_invalid_credentials(response):
     why we don't reply with a JSON-RPC response.
 
     """
-    eq_(response.status_code, 403)
+    _assert_response_code(response, 401)
     _assert_text_html(response)
     # The content should reveal nothing.
     assert response.text.lower().strip() == "invalid credentials", response.text
