@@ -192,6 +192,7 @@ def _extract_rpc_error(rpc_response):
 def test_acceptable_call():
     """Test a fully acceptable RPC call."""
     response = requests.post(TEST_ADDRESS, json=SUM_REQUEST, auth=(USERNAME, PASSWORD))
+    _assert_response_code(response, 200)
     rpc_response = _extract_response_json(response)
     assert not "error" in rpc_response, rpc_response
     assert "result" in rpc_response, rpc_response
