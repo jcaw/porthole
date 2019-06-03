@@ -25,10 +25,13 @@ TEST_HOST = "localhost"
 
 system = platform.system()
 if system.lower() == "windows":
-    PORT_FILENAME = os.path.join((os.path.expandvars("%userprofile%")
-                                  or (os.path.expandvars("%homedrive%")
-                                     + os.path.expandvars("%homepath%"))),
-                                 ".emacs-rpc-server-port")
+    PORT_FILENAME = os.path.join(
+        (
+            os.path.expandvars("%userprofile%")
+            or (os.path.expandvars("%homedrive%") + os.path.expandvars("%homepath%"))
+        ),
+        ".emacs-rpc-server-port",
+    )
 elif system.lower() in ["linux", "mac"]:
     PORT_FILENAME = os.path.expanduser("~/.emacs-rpc-server-port")
 else:
@@ -49,8 +52,8 @@ def _read_port_from_file():
         return int(port_as_string)
     except:
         raise ValueError(
-            'Port file did not contain an integer. Was: "{}"'.format(
-                port_as_string))
+            'Port file did not contain an integer. Was: "{}"'.format(port_as_string)
+        )
 
 
 TEST_PORT = _read_port_from_file()
