@@ -37,6 +37,8 @@ server."
 (define-error 'hrpc-invalid-http-request
   "The request was invalid"
   'hrpc-400-error)
+(define-error 'hrpc-401-error
+  "Authentication required")
 
 
 (defun hrpc-xor (arg1 arg2)
@@ -120,6 +122,51 @@ its own function to enable custom body handling."
      (point-max))))
 
 
+(defun hrpc--assert-authenticated (headers)
+  "Ensure a request had valid authentication.
+
+If not, a relevant `hrpc-' error will be raised that can be used
+to construct a response.
+
+`HEADERS' should be an alist of the headers, extracted from the
+`elnode' httpcon object."
+  (let ((target-username (hrpc--server-username hrpc--current-server))
+        (target-password (hrpc--server-password hrpc--current-server)))
+    ;; Only perform authentication when a username or password are required.
+    ;; Otherwise, it's authenticated by default.
+    (when (or target-username target-password)
+      (let ((authorization (hrpc-alist-get "Authorization" headers)))
+        (unless authorization
+          (signal 'hrpc-401-error "authentication required"))
+        ;; The code below that actually parses the authorization header is
+        ;; ripped from `web-server.el' by Eric Schulte. See the method
+        ;; `ws-parse' for more information.
+        (string-match "\\([^[:space:]]+\\) \\(.*\\)$" authorization)
+        (let ((protocol (match-string 1 authorization))
+              (credentials (match-string 2 authorization)))
+          (unless protocol
+            (signal 'hrpc-malformed-http-request "Invalid authorization string"))
+          (unless credentials
+            (signal 'hrpc-malformed-http-request "No credentials provided"))
+          (unless (hrpc--case-insensitive-comparison
+                   protocol "basic")
+            ;; If they've supplied the wrong protocol, just tell them
+            ;; authentication is required.
+            (signal 'hrpc-401-error "authentication required"))
+          (let ((decoded-credentials (base64-decode-string credentials)))
+            ;; Cover the case where we match at position 0.
+            (if (integerp (string-match ":" decoded-credentials))
+                (let ((provided-username (substring decoded-credentials 0
+                                                    (match-beginning 0)))
+                      (provided-password (substring decoded-credentials
+                                                    (match-end 0))))
+                  (unless (and (equal provided-username target-username)
+                               (equal provided-password target-password))
+                    (signal 'hrpc-401-error "invalid credentials")))
+              (signal 'hrpc-malformed-request
+                      (format "bad credentials: \"%s\"" decoded-credentials)))))))))
+
+
 (defun hrpc--handle-request (httpcon)
   "Handle a JSON-RPC request.
 
@@ -128,18 +175,19 @@ it to the RPC layer to be executed. It then responds to the
 client with the result."
   (condition-case err
       (let ((headers (elnode-http-headers httpcon)))
-        (progn
-          (let ((content-type (hrpc-alist-get "Content-Type" headers)))
-            (unless content-type
-              (signal 'hrpc-invalid-http-request
-                      (format "No `Content-Type` provided.")))
-            (unless (hrpc--case-insensitive-comparison
-                     (format "%s" content-type)
-                     "application/json")
-              (signal 'hrpc-invalid-http-request
-                      (format
-                       "`Content-Type` should be application/json. Was: %s"
-                       content-type))))
+        ;; Authenticate first
+        (hrpc--assert-authenticated headers)
+        (let ((content-type (hrpc-alist-get "Content-Type" headers)))
+          (unless content-type
+            (signal 'hrpc-invalid-http-request
+                    (format "No `Content-Type` provided.")))
+          (unless (hrpc--case-insensitive-comparison
+                   (format "%s" content-type)
+                   "application/json")
+            (signal 'hrpc-invalid-http-request
+                    (format
+                     "`Content-Type` should be application/json. Was: %s"
+                     content-type)))
           (let ((content (hrpc--extract-content httpcon)))
             (unless content
               (signal 'hrpc-invalid-http-request
@@ -147,11 +195,21 @@ client with the result."
             (let ((hrpc-response (jrpc-handle content)))
               (elnode-http-start httpcon 200 '("Content-Type" . "application/json"))
               (elnode-http-return httpcon hrpc-response)))))
+    (hrpc-401-error
+     (hrpc--send-401 httpcon (cdr err)))
     (hrpc-400-error
      (hrpc--send-400 httpcon (cdr err)))
     (error
      (elnode-send-500 (format "An internal error occurred. Error: %s"
                               err)))))
+
+
+(defun hrpc--send-401 (httpcon &optional message)
+  (elnode-http-start httpcon 401
+                     '("WWW-Authenticate" . "Basic realm=\"emacs-rpc-server\"")
+                     '("Content-Type" . text/html))
+  (elnode-http-return httpcon (or message
+                                  "authentication required")))
 
 
 (defun hrpc--server-port (elnode-server-instance)
@@ -302,8 +360,6 @@ running."
   (when hrpc--current-server
     (user-error "RPC server already running for this instance of Emacs. "
                 "Please call `hrpc-stop-server' before starting another."))
-  (when (or username password)
-    (error "Auth not currently implemented"))
   ;; We have to handle dynamic ports differently.
   (if (member port '("0" 0 t))
       ;; Get a dynamic port. Please note, this CAN PRODUCE A RACE CONDITION if the
