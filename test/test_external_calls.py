@@ -142,7 +142,6 @@ def _assert_authentication_required(response):
     why we don't reply with a JSON-RPC response.
 
     """
-    # Response should indicate that authentication is required.
     _assert_response_code(response, 401)
     _assert_text_html(response)
     # The content should reveal nothing.
