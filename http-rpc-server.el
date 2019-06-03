@@ -30,13 +30,13 @@ server."
   )
 
 
-(define-error 'hrpc-http-error "An error occurred processing the HTTP request")
+(define-error 'hrpc-400-error "The HTTP request was not valid")
 (define-error 'hrpc-malformed-http-request
   "The request was malformed"
-  'hrpc-http-error)
+  'hrpc-400-error)
 (define-error 'hrpc-invalid-http-request
   "The request was invalid"
-  'hrpc-http-error)
+  'hrpc-400-error)
 
 
 (defun hrpc-xor (arg1 arg2)
@@ -149,7 +149,7 @@ client with the result."
             (let ((hrpc-response (jrpc-handle content)))
               (elnode-http-start httpcon 200 '("Content-Type" . "application/json"))
               (elnode-http-return httpcon hrpc-response)))))
-    (hrpc-http-error
+    (hrpc-400-error
      (hrpc--send-400 httpcon (cdr err)))
     (error
      (elnode-send-500 (format "An internal error occurred. Error: %s"
