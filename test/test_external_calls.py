@@ -23,19 +23,31 @@ PASSWORD = "test_password"
 PROTOCOL = "http://"
 TEST_HOST = "localhost"
 
+# Get the temp dir to use, depending on the platform.
 system = platform.system()
 if system.lower() == "windows":
-    PORT_FILENAME = os.path.join(
-        (
-            os.path.expandvars("%userprofile%")
-            or (os.path.expandvars("%homedrive%") + os.path.expandvars("%homepath%"))
-        ),
-        ".emacs-rpc-server-port",
-    )
-elif system.lower() in ["linux", "mac"]:
-    PORT_FILENAME = os.path.expanduser("~/.emacs-rpc-server-port")
+    temp_dir = os.environ("TEMP")
+elif system.lower() == "linux":
+    if "XDG_RUNTIME_DIR" in os.environ:
+        temp_dir = os.environ["XDG_RUNTIME_DIR"]
+    elif "HOME" in os.environ:
+        temp_dir = os.environ["HOME"]
+    else:
+        raise IOError(
+            "Neither $XDG_RUNTIME_DIR or $HOME could be read. "
+            "Cannot automatically query server information on "
+            "this Linux system."
+        )
+elif system.lower() == "mac":
+    raise ValueError("Cannot test on Mac yet")
 else:
+    # TODO: swap to oserror?
     raise ValueError('Cannot test on this system: "{}"'.format(platform.system()))
+
+
+PORT_FILENAME = os.path.join(
+    temp_dir, "emacs-http-rpc-server", ".emacs-rpc-server-port"
+)
 
 
 def _read_port_from_file():

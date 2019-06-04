@@ -248,19 +248,60 @@ extract the actual port from the underlying network process."
   "Filename (sans directory) of the temporary port file.")
 
 
+(defun hrpc--get-linux-temp-dir ()
+  "Get a user-only temp dir on Linux, to store the server info in."
+  ;; If the runtime dir isn't available, fall back to the home dir.
+  (or (getenv "XDG_RUNTIME_DIR")
+      (let ((home (getenv "HOME")))
+        (if home
+            (progn
+              (display-warning
+               "http-rpc-server"
+               (concat "$XDG_RUNTIME_DIR environment variable not set. Using "
+                       "$HOME/tmp as the base temp directory instead."))
+              (format "%s/%s" home "/tmp"))
+          (display-warning
+           "http-rpc-server"
+           (concat "Neither $XDG_RUNTIME_DIR nor $HOME could be read from "
+                   "the environment. Clients will not be able to automatically "
+                   "connect to the server by reading the temp file."))))))
+
+
+(defconst hrpc--base-temp-dir
+  (cond ((hrpc--on-linux)
+         (hrpc--get-linux-temp-dir))
+        ((hrpc--on-windows
+          (getenv "TEMP")))
+        ((hrpc--on-mac)
+         ;; TODO: Mac temp dir
+         (error "Not Implemented on Mac yet"))
+        (t
+         (display-warning
+          "http-rpc-server"
+          (concat "Unrecognised system type. Don't know where to find the "
+                  "temp directory. Clients will not be able to automatically "
+                  "read the RPC server's configuration"))))
+  "The base temp directory to use.
+
+This will be dependent on the current system.")
+
+
+(defconst hrpc--server-session-dir
+  (when hrpc--base-temp-dir
+    (format "%s/%s" hrpc--base-temp-dir "emacs-http-rpc-server"))
+  "Directory in which to store files relating to the current server session.
+
+This is a known name, so clients can also read it and gather
+relevant information.")
+
+
 (defconst hrpc--port-number-temp-file
-  (cond ((or (hrpc--on-linux)
-             (hrpc--on-mac))
-         (substitute-in-file-name
-          (format "$HOME/%s" hrpc--port-number-filename-only)))
-        ((hrpc--on-windows)
-         (format "%s\\%s"
-                 (or (getenv "USERPROFILE")
-                     (concat (getenv "HOMEDRIVE")
-                             (getenv "HOMEPATH")))
-                 hrpc--port-number-filename-only))
-        (t nil))
-  "Temporary file used to communicate the port number to clients.")
+  (when hrpc--server-session-dir
+    (format "%s/%s" hrpc--server-session-dir hrpc--port-number-filename-only))
+  "File that the current port should be written to.
+
+This is a known name, so clients can read the current port as
+needed.")
 
 
 (defun hrpc--publish-port (port)
@@ -269,23 +310,36 @@ extract the actual port from the underlying network process."
 This file is used so clients can determine which port the server
 was dynamically allocated at creation. It is not necessary if a
 fixed port was used, but it can still be useful to reduce setup."
-  (unless hrpc--port-number-temp-file
-    (error "Port publishing not supported on this platform."))
-  ;; Make at least some effort to clean up the port file when Emacs is closed.
-  ;; This will only clean it up when `kill-emacs' is called, but it's better
-  ;; than nothing.
-  (add-hook 'kill-emacs-hook 'hrpc--erase-port-file)
-  (unwind-protect
+  (if hrpc--port-number-temp-file
       (progn
-        (find-file hrpc--port-number-temp-file)
-        ;; Erase any existing port information.
-        (erase-buffer)
-        (insert (format "%s" port))
-        (write-file hrpc--port-number-temp-file)
-        (message (concat "JSON-RPC server port written to \"%s\". This file can "
-                         "be used by clients to determine the port to connect to.")
-                 hrpc--port-number-temp-file))
-    (kill-current-buffer)))
+        ;; Make at least some effort to clean up the port file when Emacs is closed.
+        ;; This will only clean it up when `kill-emacs' is called, but it's better
+        ;; than nothing.
+        (add-hook 'kill-emacs-hook 'hrpc--erase-port-file)
+        (unwind-protect
+            (progn
+              (find-file hrpc--port-number-temp-file)
+              ;; Erase any existing port information.
+              (erase-buffer)
+              (insert (format "%s" port))
+              ;; Create the rpc server's subdir if it doesn't exist in the temp
+              ;; folder.
+              (unless (file-directory-p hrpc--server-session-dir)
+                (make-directory hrpc--server-session-dir))
+              ;; Possible race condition here if the temp dir is cleaned up
+              ;; between these two operations. Very small chance though, and all
+              ;; that will happen is the user will be prompted to confirm the
+              ;; directory creation.
+              (write-file hrpc--port-number-temp-file nil)
+              (message
+               (concat
+                "JSON-RPC server port written to \"%s\". This file can "
+                "be used by clients to determine the port to connect to.")
+               hrpc--port-number-temp-file))
+          (kill-current-buffer)))
+    (display-warning
+     "http-rpc-server"
+     "The server's session information will not be published.")))
 
 
 (defun hrpc--find-free-port (host)
