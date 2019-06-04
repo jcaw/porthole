@@ -28,11 +28,8 @@ system = platform.system()
 if system.lower() == "windows":
     temp_dir = os.environ("TEMP")
 elif system.lower() == "linux":
-    if "XDG_RUNTIME_DIR" in os.environ:
-        temp_dir = os.environ["XDG_RUNTIME_DIR"]
-    elif "HOME" in os.environ:
-        temp_dir = os.environ["HOME"]
-    else:
+    temp_dir = os.environ.get("XDG_RUNTIME_DIR") or os.environ.get("HOME")
+    if not temp_dir:
         raise IOError(
             "Neither $XDG_RUNTIME_DIR or $HOME could be read. "
             "Cannot automatically query server information on "
