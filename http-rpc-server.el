@@ -19,6 +19,15 @@ If the server is running, this will be an `hrpc--server' object.
 If not, it will be nil")
 
 
+(defvar hrpc-exposed-functions '()
+  "List of functions that can be executed via POST request.
+
+This list is used to determine which functions the RPC server
+will accept. It's a security measure to ensure only the functions
+you want are exposed. If you want to execute a function via RPC,
+it must be on this list.")
+
+
 (cl-defstruct hrpc--server
   "Structure representing an HTTP RPC server.
 
@@ -193,7 +202,8 @@ client with the result."
             (unless content
               (signal 'hrpc-invalid-http-request
                       "Content could not be extracted from the request."))
-            (let ((hrpc-response (jrpc-handle content)))
+            (let ((hrpc-response (jrpc-handle content
+                                              hrpc-exposed-functions)))
               (elnode-http-start httpcon 200 '("Content-Type" . "application/json"))
               (elnode-http-return httpcon hrpc-response)))))
     (hrpc-401-error
@@ -496,6 +506,27 @@ This method will fail if no server is running."
 
 For example, it can safely be attached to the kill-emacs-hook."
   (ignore-errors (hrpc-stop-server)))
+
+
+(defun hrpc-expose-function (func)
+  "Expose a function to remote procedure calls.
+
+Only functions that have been exposed can be executed remotely
+via the JSON-RPC protocol.
+
+Functions may only be invoked by name - lambda functions are not
+allowed (there would be no way to reference them remotely by
+name). `FUNC' is the function symbol to expose."
+  (add-to-list 'hrpc-exposed-functions func))
+
+
+(defun hrpc-hide-function (func)
+  "Hide a function from remote procedure calls.
+
+`FUNC' is the function symbol to hide.
+
+This reverses `hrpc-expose-function'."
+  (setq hrpc-exposed-functions (remove func hrpc-exposed-functions)))
 
 
 (provide 'http-rpc-server)

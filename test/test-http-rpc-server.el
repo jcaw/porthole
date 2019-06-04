@@ -43,7 +43,7 @@ configuration."
   ;; Stop the server if it's running.
   (ignore-errors (hrpc-stop-server))
   ;; Have to expose a single method: `+'.
-  (setq jrpc-exposed-functions '(+))
+  (setq hrpc-exposed-functions '(+))
   ;; We use dynamic port 8006 for tests. These tests won't work if port 8006 is
   ;; already bound.
   (hrpc-start-server :port hrpc-test-port
