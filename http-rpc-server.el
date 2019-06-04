@@ -1,6 +1,7 @@
 (require 'cl-lib)
 (require 'elnode)
 (require 'json-rpc-server)
+(require 'f)
 
 
 ;; We have to monkeypatch Elnode before using it on Emacs 26, possibly other
@@ -259,7 +260,7 @@ extract the actual port from the underlying network process."
                "http-rpc-server"
                (concat "$XDG_RUNTIME_DIR environment variable not set. Using "
                        "$HOME/tmp as the base temp directory instead."))
-              (format "%s/%s" home "/tmp"))
+              (f-join home "/tmp"))
           (display-warning
            "http-rpc-server"
            (concat "Neither $XDG_RUNTIME_DIR nor $HOME could be read from "
@@ -288,7 +289,7 @@ This will be dependent on the current system.")
 
 (defconst hrpc--server-session-dir
   (when hrpc--base-temp-dir
-    (format "%s/%s" hrpc--base-temp-dir "emacs-http-rpc-server"))
+    (f-join hrpc--base-temp-dir "emacs-http-rpc-server"))
   "Directory in which to store files relating to the current server session.
 
 This is a known name, so clients can also read it and gather
@@ -297,7 +298,7 @@ relevant information.")
 
 (defconst hrpc--port-number-temp-file
   (when hrpc--server-session-dir
-    (format "%s/%s" hrpc--server-session-dir hrpc--port-number-filename-only))
+    (f-join hrpc--server-session-dir hrpc--port-number-filename-only))
   "File that the current port should be written to.
 
 This is a known name, so clients can read the current port as
