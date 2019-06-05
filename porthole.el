@@ -163,8 +163,8 @@ Returns a new alist without those elements."
 
 
 (defun porthole--random-sha256-key ()
-  ;; Make 400 random strings, join them, then hash the result. That should be
-  ;; suitably unique.
+  ;; Make 400 random int strings, join them, then hash the result. That should
+  ;; be suitably unique.
   (let ((long-random-number
          (apply 'concat (mapcar (lambda (_)
                                   (format "%s" (random 9999999999999)))
