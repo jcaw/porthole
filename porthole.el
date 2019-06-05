@@ -44,15 +44,6 @@ server."
   "Authentication required")
 
 
-(defun porthole-xor (arg1 arg2)
-  "Exclusive or of two parameters, `ARG1' and `ARG2'.
-
-This is not a bitwise comparison. It uses the truthiness of the
-arguments to evaluate the result."
-  (and (or arg1 arg2)
-       (not (and arg1 arg2))))
-
-
 (defun porthole--case-insensitive-comparison (string1 string2)
   "Check if two objects are identical strings, case insensitive.
 
