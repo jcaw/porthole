@@ -655,9 +655,7 @@ running."
                           ;; If the server was started successfully, we're done. We
                           ;; have a server - break out and continue.
                           (throw 'server-started t))
-                      (file-error nil)
-                      (error
-                       (signal (car err) (cdr err))))
+                      (file-error nil))
                     (throw 'server-started nil)))
           ;; If the server could not be started after many retries, we just raise an error.
           (error "%s" (format (concat
