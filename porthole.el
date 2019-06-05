@@ -33,14 +33,14 @@ server."
   )
 
 
-(define-error 'porthole-400-error "The HTTP request was not valid")
-(define-error 'porthole-malformed-http-request
+(define-error 'porthole--400-error "The HTTP request was not valid")
+(define-error 'porthole--malformed-http-request
   "The request was malformed"
-  'porthole-400-error)
-(define-error 'porthole-invalid-http-request
+  'porthole--400-error)
+(define-error 'porthole--invalid-http-request
   "The request was invalid"
-  'porthole-400-error)
-(define-error 'porthole-401-error
+  'porthole--400-error)
+(define-error 'porthole--401-error
   "Authentication required")
 
 
@@ -148,7 +148,7 @@ to construct a response.
     (when (or target-username target-password)
       (let ((authorization (porthole--alist-get "Authorization" headers)))
         (unless authorization
-          (signal 'porthole-401-error "authentication required"))
+          (signal 'porthole--401-error "authentication required"))
         ;; The code below that actually parses the authorization header is
         ;; ripped from `web-server.el' by Eric Schulte. See the method
         ;; `ws-parse' for more information.
@@ -156,14 +156,14 @@ to construct a response.
         (let ((protocol (match-string 1 authorization))
               (credentials (match-string 2 authorization)))
           (unless protocol
-            (signal 'porthole-malformed-http-request "Invalid authorization string"))
+            (signal 'porthole--malformed-http-request "Invalid authorization string"))
           (unless credentials
-            (signal 'porthole-malformed-http-request "No credentials provided"))
+            (signal 'porthole--malformed-http-request "No credentials provided"))
           (unless (porthole--case-insensitive-comparison
                    protocol "basic")
             ;; If they've supplied the wrong protocol, just tell them
             ;; authentication is required.
-            (signal 'porthole-401-error "authentication required"))
+            (signal 'porthole--401-error "authentication required"))
           (let ((decoded-credentials (base64-decode-string credentials)))
             ;; Cover the case where we match at position 0.
             (if (integerp (string-match ":" decoded-credentials))
@@ -173,7 +173,7 @@ to construct a response.
                                                     (match-end 0))))
                   (unless (and (equal provided-username target-username)
                                (equal provided-password target-password))
-                    (signal 'porthole-401-error "invalid credentials")))
+                    (signal 'porthole--401-error "invalid credentials")))
               (signal 'porthole-malformed-request
                       (format "bad credentials: \"%s\""
                               decoded-credentials)))))))))
@@ -232,26 +232,26 @@ client with the result."
         (porthole--assert-authenticated headers porthole-server)
         (let ((content-type (porthole--alist-get "Content-Type" headers)))
           (unless content-type
-            (signal 'porthole-invalid-http-request
+            (signal 'porthole--invalid-http-request
                     (format "No `Content-Type` provided.")))
           (unless (porthole--case-insensitive-comparison
                    (format "%s" content-type)
                    "application/json")
-            (signal 'porthole-invalid-http-request
+            (signal 'porthole--invalid-http-request
                     (format
                      "`Content-Type` should be application/json. Was: %s"
                      content-type)))
           (let ((content (porthole--extract-content httpcon)))
             (unless content
-              (signal 'porthole-invalid-http-request
+              (signal 'porthole--invalid-http-request
                       "Content could not be extracted from the request."))
             (let* ((exposed-functions (porthole--server-exposed-functions porthole-server))
                    (porthole-response (jrpc-handle content exposed-functions)))
               (elnode-http-start httpcon 200 '("Content-Type" . "application/json"))
               (elnode-http-return httpcon porthole-response)))))
-    (porthole-401-error
+    (porthole--401-error
      (porthole--send-401 httpcon (cdr err)))
-    (porthole-400-error
+    (porthole--400-error
      (porthole--send-400 httpcon (cdr err)))
     (error
      (elnode-send-500 httpcon (format "An internal error occurred. Error: %s"
