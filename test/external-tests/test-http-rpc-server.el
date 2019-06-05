@@ -9,7 +9,7 @@
       load-path)
 
 
-(load-file "../http-rpc-server.el")
+(load-file "../../http-rpc-server.el")
 
 
 (defconst hrpc-transport-layer-test-dir
@@ -17,8 +17,7 @@
    (or load-file-name buffer-file-name)))
 
 
-(defconst hrpc-test-port 0
-  "For testing, we dynamically allocate a port.")
+(defvar hrpc-test-server-name "external-tests-server")
 
 
 (defun hrpc-stop-server-on-idle-timer ()
@@ -36,20 +35,15 @@ run successfully."
 
 This method spins up a test server and then runs a set of HTTP
 requests using Python. The results will be displayed in a new
-buffer.
-
-Note that this test will reset your `json-rpc-server'
-configuration."
+buffer."
   (interactive)
   ;; Stop the server if it's running.
-  (ignore-errors (hrpc-stop-server))
-  ;; Have to expose a single method: `+'.
-  (setq hrpc-exposed-functions '(+))
-  ;; We use dynamic port 8006 for tests. These tests won't work if port 8006 is
-  ;; already bound.
-  (hrpc-start-server :port hrpc-test-port
-                     :username "test_username"
-                     :password "test_password")
+  (ignore-errors (hrpc-stop-server hrpc-test-server-name))
+  ;; Start the test on an automatically assigned port.
+  (hrpc-start-server hrpc-test-server-name
+                     ;; Have to expose a single method: `+'.
+                     :exposed-functions '(+))
+  (message "server: %s" (hrpc--get-server hrpc-test-server-name))
   (let ((default-directory hrpc-transport-layer-test-dir))
     (async-shell-command
      (format "nosetests %s" "test_external_calls.py")

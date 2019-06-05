@@ -16,10 +16,10 @@ from multiprocessing import Lock
 import requests
 import os
 import platform
+import json
 
-USERNAME = "test_username"
-PASSWORD = "test_password"
 
+TEST_SERVER_NAME = "external-tests-server"
 PROTOCOL = "http://"
 TEST_HOST = "localhost"
 
@@ -42,34 +42,26 @@ else:
     raise ValueError('Cannot test on this system: "{}"'.format(platform.system()))
 
 
-PORT_FILENAME = os.path.join(
-    temp_dir, "emacs-http-rpc-server", ".emacs-rpc-server-port"
+SESSION_INFO_FILENAME = os.path.join(
+    temp_dir, "emacs-http-rpc-server", TEST_SERVER_NAME, "session.json"
 )
 
 
-def _read_port_from_file():
-    """Read the server's current port number from the port file.
-
-    :returns: the server's current port number
-    :rtype: int
-
-    """
-    with open(PORT_FILENAME) as f:
-        port_as_string = f.read()
-    port_as_string = port_as_string.strip()
-    try:
-        return int(port_as_string)
-    except:
-        raise ValueError(
-            'Port file did not contain an integer. Was: "{}"'.format(port_as_string)
-        )
+with open(SESSION_INFO_FILENAME) as f:
+    SESSION_INFO = json.load(f)
 
 
-TEST_PORT = _read_port_from_file()
+print("Session info: ", SESSION_INFO)
+
+
+TEST_PORT = SESSION_INFO["port"]
+USERNAME = SESSION_INFO["username"]
+PASSWORD = SESSION_INFO["password"]
 
 TEST_ADDRESS = "{protocol}{host}:{port}".format(
     protocol=PROTOCOL, host=TEST_HOST, port=TEST_PORT
 )
+
 
 id_lock = Lock()
 last_id = 0

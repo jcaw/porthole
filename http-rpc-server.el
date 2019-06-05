@@ -12,20 +12,11 @@
 ;;; Code
 
 
-(defvar hrpc--current-server nil
-  "The currently running hrpc server.
+(defvar hrpc--running-servers '()
+  "Alist of running HTTP-RPC servers.
 
-If the server is running, this will be an `hrpc--server' object.
-If not, it will be nil")
-
-
-(defvar hrpc-exposed-functions '()
-  "List of functions that can be executed via POST request.
-
-This list is used to determine which functions the RPC server
-will accept. It's a security measure to ensure only the functions
-you want are exposed. If you want to execute a function via RPC,
-it must be on this list.")
+Maps server names (strings) to their respective `hrpc--server'
+objects.")
 
 
 (cl-defstruct hrpc--server
@@ -33,7 +24,9 @@ it must be on this list.")
 
 This struct is intended to be used as a record of the running RPC
 server."
+  (name :read-only t :type string)
   (port :read-only t)
+  (exposed-functions '())
   (username nil :read-only t)
   (password nil :read-only t)
   (elnode-process :read-only t)
@@ -112,6 +105,23 @@ For example:
          (cdr pair))))
 
 
+(defun hrpc--alist-remove (key alist)
+  "Remove all pairs referenced by `KEY' in `ALIST'.
+
+Returns a new alist without those elements."
+  (cl-delete server-name hrpc--running-servers :key #'car :test #'equal))
+
+
+(defun hrpc--random-sha256-key ()
+  ;; Make 400 random strings, join them, then hash the result. That should be
+  ;; suitably unique.
+  (let ((long-random-number
+         (apply 'concat (mapcar (lambda (_)
+                                  (format "%s" (random 9999999999999)))
+                                (number-sequence 0 400)))))
+    (secure-hash 'sha256 long-random-number)))
+
+
 (defun hrpc--send-400 (httpcon message)
   (elnode-send-400 httpcon message))
 
@@ -132,7 +142,7 @@ its own function to enable custom body handling."
      (point-max))))
 
 
-(defun hrpc--assert-authenticated (headers)
+(defun hrpc--assert-authenticated (headers hrpc-server)
   "Ensure a request had valid authentication.
 
 If not, a relevant `hrpc-' error will be raised that can be used
@@ -140,8 +150,8 @@ to construct a response.
 
 `HEADERS' should be an alist of the headers, extracted from the
 `elnode' httpcon object."
-  (let ((target-username (hrpc--server-username hrpc--current-server))
-        (target-password (hrpc--server-password hrpc--current-server)))
+  (let ((target-username (hrpc--server-username hrpc-server))
+        (target-password (hrpc--server-password hrpc-server)))
     ;; Only perform authentication when a username or password are required.
     ;; Otherwise, it's authenticated by default.
     (when (or target-username target-password)
@@ -174,7 +184,48 @@ to construct a response.
                                (equal provided-password target-password))
                     (signal 'hrpc-401-error "invalid credentials")))
               (signal 'hrpc-malformed-request
-                      (format "bad credentials: \"%s\"" decoded-credentials)))))))))
+                      (format "bad credentials: \"%s\""
+                              decoded-credentials)))))))))
+
+
+(defun hrpc--server-from-port (port)
+  "Get the `hrpc--server' object running on `PORT'.
+
+Throws an error if no server could be found running on that
+port."
+  (catch 'server-found
+    ;; Check port against each running server
+    (mapc (lambda (server-pair)
+            (let* ((server (cdr server-pair))
+                   (server-port (hrpc--server-port server)))
+              (when (eq port server-port)
+                ;; Server matches! Return it.
+                (throw 'server-found server))))
+          hrpc--running-servers)
+    ;; No server was found. Raise an error.
+    (error "%s" (format "No `hrpc--server' could be found running on port %s"
+                        port))))
+
+
+(defun hrpc--server-from-httpcon (httpcon)
+  "Get the `hrpc--server' that this `HTTPCON' is connecting to.
+
+Returns an `hrpc--server' object.
+
+Throws an error if no object could be found."
+  ;; We get the underlying Elnode server that's serving the connection, then we
+  ;; get the `hrpc--server' from that.
+  ;;
+  ;; We use the port as the key to extract the `hrpc--server'. Why introduce the
+  ;; extra step? Why not use the Elnode server as the key? Well, ports are
+  ;; probably more robust. What if Elnode restarted its server for some reason,
+  ;; such as rebooting after a fatal error? The ports should still match, even
+  ;; if the servers don't.
+  (or (hrpc--server-from-port
+       (let ((underlying-elnode-server (process-get httpcon :server)))
+         (process-contact underlying-elnode-server :service)))
+      ;; Block if no server found.
+      (error "%s" "No `hrpc--server' could be found for `HTTPCON'")))
 
 
 (defun hrpc--handle-request (httpcon)
@@ -184,9 +235,10 @@ This method extracts the underlying JSON-RPC request and passes
 it to the RPC layer to be executed. It then responds to the
 client with the result."
   (condition-case err
-      (let ((headers (elnode-http-headers httpcon)))
+      (let ((headers (elnode-http-headers httpcon))
+            (hrpc-server (hrpc--server-from-httpcon httpcon)))
         ;; Authenticate first
-        (hrpc--assert-authenticated headers)
+        (hrpc--assert-authenticated headers hrpc-server)
         (let ((content-type (hrpc-alist-get "Content-Type" headers)))
           (unless content-type
             (signal 'hrpc-invalid-http-request
@@ -202,8 +254,8 @@ client with the result."
             (unless content
               (signal 'hrpc-invalid-http-request
                       "Content could not be extracted from the request."))
-            (let ((hrpc-response (jrpc-handle content
-                                              hrpc-exposed-functions)))
+            (let* ((exposed-functions (hrpc--server-exposed-functions hrpc-server))
+                   (hrpc-response (jrpc-handle content exposed-functions)))
               (elnode-http-start httpcon 200 '("Content-Type" . "application/json"))
               (elnode-http-return httpcon hrpc-response)))))
     (hrpc-401-error
@@ -211,8 +263,8 @@ client with the result."
     (hrpc-400-error
      (hrpc--send-400 httpcon (cdr err)))
     (error
-     (elnode-send-500 (format "An internal error occurred. Error: %s"
-                              err)))))
+     (elnode-send-500 httpcon (format "An internal error occurred. Error: %s"
+                                      err)))))
 
 
 (defun hrpc--send-401 (httpcon &optional message)
@@ -254,11 +306,6 @@ extract the actual port from the underlying network process."
   (eq (system-type 'darwin)))
 
 
-(defconst hrpc--port-number-filename-only
-  ".emacs-rpc-server-port"
-  "Filename (sans directory) of the temporary port file.")
-
-
 (defun hrpc--get-linux-temp-dir ()
   "Get a user-only temp dir on Linux, to store the server info in."
   ;; If the runtime dir isn't available, fall back to the home dir.
@@ -297,7 +344,7 @@ extract the actual port from the underlying network process."
 This will be dependent on the current system.")
 
 
-(defconst hrpc--server-session-dir
+(defconst hrpc--session-info-dir
   (when hrpc--base-temp-dir
     (f-join hrpc--base-temp-dir "emacs-http-rpc-server"))
   "Directory in which to store files relating to the current server session.
@@ -306,51 +353,50 @@ This is a known name, so clients can also read it and gather
 relevant information.")
 
 
-(defconst hrpc--port-number-temp-file
-  (when hrpc--server-session-dir
-    (f-join hrpc--server-session-dir hrpc--port-number-filename-only))
-  "File that the current port should be written to.
+(defconst hrpc--session-file-name "session.json"
+  "Local filename for a session info file.
 
-This is a known name, so clients can read the current port as
-needed.")
+"
+  ;; TODO: Flesh out session file name docstring
+  )
 
 
-(defun hrpc--publish-port (port)
-  "Write the server's port number to a temporary file.
+;; (defun hrpc--publish-port (port)
+;;   "Write the server's port number to a temporary file.
 
-This file is used so clients can determine which port the server
-was dynamically allocated at creation. It is not necessary if a
-fixed port was used, but it can still be useful to reduce setup."
-  (if hrpc--port-number-temp-file
-      (progn
-        ;; Make at least some effort to clean up the port file when Emacs is closed.
-        ;; This will only clean it up when `kill-emacs' is called, but it's better
-        ;; than nothing.
-        (add-hook 'kill-emacs-hook 'hrpc--erase-port-file)
-        (unwind-protect
-            (progn
-              (find-file hrpc--port-number-temp-file)
-              ;; Erase any existing port information.
-              (erase-buffer)
-              (insert (format "%s" port))
-              ;; Create the rpc server's subdir if it doesn't exist in the temp
-              ;; folder.
-              (unless (file-directory-p hrpc--server-session-dir)
-                (make-directory hrpc--server-session-dir))
-              ;; Possible race condition here if the temp dir is cleaned up
-              ;; between these two operations. Very small chance though, and all
-              ;; that will happen is the user will be prompted to confirm the
-              ;; directory creation.
-              (write-file hrpc--port-number-temp-file nil)
-              (message
-               (concat
-                "JSON-RPC server port written to \"%s\". This file can "
-                "be used by clients to determine the port to connect to.")
-               hrpc--port-number-temp-file))
-          (kill-current-buffer)))
-    (display-warning
-     "http-rpc-server"
-     "The server's session information will not be published.")))
+;; This file is used so clients can determine which port the server
+;; was dynamically allocated at creation. It is not necessary if a
+;; fixed port was used, but it can still be useful to reduce setup."
+;;   (if hrpc--port-number-temp-file
+;;       (progn
+;;         ;; Make at least some effort to clean up the port file when Emacs is closed.
+;;         ;; This will only clean it up when `kill-emacs' is called, but it's better
+;;         ;; than nothing.
+;;         (add-hook 'kill-emacs-hook 'hrpc--erase-port-file)
+;;         (unwind-protect
+;;             (progn
+;;               (find-file hrpc--port-number-temp-file)
+;;               ;; Erase any existing port information.
+;;               (erase-buffer)
+;;               (insert (format "%s" port))
+;;               ;; Create the rpc server's subdir if it doesn't exist in the temp
+;;               ;; folder.
+;;               (unless (file-directory-p hrpc--session-info-dir)
+;;                 (make-directory hrpc--session-info-dir))
+;;               ;; Possible race condition here if the temp dir is cleaned up
+;;               ;; between these two operations. Very small chance though, and all
+;;               ;; that will happen is the user will be prompted to confirm the
+;;               ;; directory creation.
+;;               (write-file hrpc--port-number-temp-file nil)
+;;               (message
+;;                (concat
+;;                 "JSON-RPC server port written to \"%s\". This file can "
+;;                 "be used by clients to determine the port to connect to.")
+;;                hrpc--port-number-temp-file))
+;;           (kill-current-buffer)))
+;;     (display-warning
+;;      "http-rpc-server"
+;;      "The server's session information will not be published.")))
 
 
 (defun hrpc--find-free-port (host)
@@ -372,17 +418,148 @@ still be protected against."
     port))
 
 
-(defun hrpc--erase-port-file ()
-  "Erase the port information file, if it exists."
-  (if (file-exists-p hrpc--port-number-temp-file)
-      (delete-file hrpc--port-number-temp-file nil)))
+;; (defun hrpc--erase-port-file ()
+;;   "Erase the port information file, if it exists."
+;;   (if (file-exists-p hrpc--port-number-temp-file)
+;;       (delete-file hrpc--port-number-temp-file nil)))
 
 
-(cl-defun hrpc-start-server (&key
-                             (port 0)
-                             username
-                             password
-                             (publish-port t))
+(defun hrpc--get-session-folder (server-name)
+  "Get the session info folder for `SERVER-NAME'."
+  ;; Session file should be at:
+  ;; <http-rpc-server-info-dir>/<server-name>/session.json
+  (f-join hrpc--session-info-dir server-name))
+
+
+(defun hrpc-get-session-file-path (server-name)
+  "Get the path of the session file for server with name `SERVER-NAME'."
+  ;; Session file should be at:
+  ;; <http-rpc-server-info-dir>/<server-name>/session.json
+  (f-join (hrpc--get-session-folder server-name)
+          hrpc--session-file-name))
+
+
+(cl-defun hrpc--publish-session-file (name
+                                      port
+                                      username
+                                      password
+                                      &key
+                                      (publish-port t)
+                                      (publish-username t)
+                                      (publish-password t))
+  "Publish the current session's session info."
+  ;; TODO: Flesh out docstring.
+  (let ((info '()))
+    (when publish-port
+      (push `(port . ,port)
+            info))
+    (when publish-username
+      (push `(username . ,username)
+            info))
+    (when publish-password
+      (push `(password . ,password)
+            info))
+    (let ((info-as-json (json-encode info))
+          (info-folder (hrpc--get-session-folder name))
+          (info-filename (hrpc-get-session-file-path name)))
+      (unless (f-dir-p info-folder)
+        ;; Make the app and server directories, if they don't exist.
+        (make-directory info-folder t))
+      (with-temp-file info-filename
+        (insert info-as-json)))))
+
+
+(defun hrpc--erase-session-file (server-name)
+  "Delete the server's session file.
+
+Also deletes the server's session folder."
+  (let ((info-folder (hrpc--get-session-folder server-name))
+        (info-filename (hrpc-get-session-file-path server-name)))
+    (when (f-file-p info-filename)
+      (f-delete info-filename))
+    (when (f-dir-p info-folder)
+      (f-delete info-folder t))))
+
+
+(defun hrpc--running-server-names ()
+  "Get the names of all running servers."
+  (mapcar 'car hrpc--running-servers))
+
+
+(defun hrpc--get-server (server-name)
+  "Get the `hrpc--server' with name `SERVER-NAME'.
+
+Returns nil if no server with this name is running."
+  (hrpc-alist-get server-name hrpc--running-servers))
+
+
+(defun hrpc--server-running-p (server-name)
+  "Returns t if a server with `SERVER-NAME' is already running.
+
+Note that server names are case-insensitive."
+  (if (hrpc--get-server server-name) t nil))
+
+
+(defun hrpc--assert-server-running (server-name &optional message)
+  "Ensure a server is running. If not, throw an error.
+
+`SERVER-NAME' is the name of the server to check"
+  (unless (hrpc--server-running-p server-name)
+    (error "%s" (or message
+                    (format "No server named \"%s\" is running" server-name)))))
+
+
+(defun hrpc--assert-server-not-running (server-name &optional message)
+  "If a server with `SERVER-NAME' is running, throw an error.
+
+`SERVER-NAME' is the name of the server to check."
+  (when (hrpc--server-running-p server-name)
+    (error "%s" (or message
+                    (format "A server with the name \"%s\" is already running"
+                            server-name)))))
+
+
+(cl-defun hrpc-start-server (name &key (exposed-functions '()))
+  "Start a server. `NAME' should be the name of the server.
+
+`NAME' should be a string that references the server. It should
+be a unique name. Only alphanumeric characters and dashes are
+allowed.
+
+`EXPOSED-FUNCTIONS' is optional. If provided, these functions
+will immediately be available to call from the server when it is
+launched.
+
+This is the intended way to start a server. The server will be
+started on a dynamically allocated port, with a random SHA-256
+username and password. These credentials will be published to the
+server's session file, which is accessible only to the user.
+
+If you would like more control over the server (for example,
+specifying the username, port or password) please refer to
+`hrpc-start-server-advanced'."
+  (let ((username (hrpc--random-sha256-key))
+        (password (hrpc--random-sha256-key)))
+    (hrpc-start-server-advanced name
+                                :port 0
+                                :username username
+                                :password password
+                                :publish-port t
+                                :publish-username t
+                                :publish-password t
+                                :exposed-functions exposed-functions)))
+
+
+(cl-defun hrpc-start-server-advanced (server-name
+                                      &key
+                                      (port 0)
+                                      (username nil)
+                                      (password nil)
+                                      (publish-port t)
+                                      ;; TODO: Maybe combine into "publish-credentials"?
+                                      (publish-username t)
+                                      (publish-password t)
+                                      (exposed-functions '()))
   "Start a new JSON-RPC 2.0 server.
 
 JSON-RPC requests to the server should be sent in the body of
@@ -422,9 +599,8 @@ specification, although the server will also tolerate JSON-RPC
 
 Note that this method will fail if the server is already
 running."
-  (when hrpc--current-server
-    (user-error "RPC server already running for this instance of Emacs. "
-                "Please call `hrpc-stop-server' before starting another."))
+  ;; TODO: server-name restriction. Only certain chars.
+  (hrpc--assert-server-not-running server-name)
   ;; We have to handle dynamic ports differently.
   (if (member port '("0" 0 t))
       ;; Get a dynamic port. Please note, this CAN PRODUCE A RACE CONDITION if the
@@ -459,13 +635,13 @@ running."
                           (throw 'server-started t))
                       (file-error nil)
                       (error
-                       (signal (car err) (cdr err)))
-                      )
+                       (signal (car err) (cdr err))))
                     (throw 'server-started nil)))
           ;; If the server could not be started after many retries, we just raise an error.
-          (error "%s" (concat (format "Tried to start on a free port %s times."
-                                      max-attempts)
-                              " Failed each time. Server could not be started."))))
+          (error "%s" (format (concat
+                               "Tried to start on a free port %s times."
+                               " Failed each time. Server could not be started.")
+                              max-attempts))))
     (when (alist-get port elnode-server-socket)
       (error "Elnode already has a server running on this port."))
     (elnode-start
@@ -473,51 +649,80 @@ running."
      :port port
      :host "localhost"))
   ;; If we've reached this point, the server has started successfully.
-  (setq hrpc--current-server
-        (make-hrpc--server
-         :port port
-         :username username
-         :password password
-         ;; We store the actual Elnode server process too, in case we wish to
-         ;; query it directly.
-         :elnode-process (alist-get port elnode-server-socket)))
-  (add-hook 'kill-emacs-hook 'hrpc--stop-server-safe)
-  (message "JSON-RPC server running on port %s" port)
-  (when publish-port
-    (hrpc--publish-port port))
-  hrpc--current-server)
+  (push (cons server-name (make-hrpc--server
+                           :name server-name
+                           :port port
+                           :username username
+                           :password password
+                           :exposed-functions exposed-functions
+                           ;; We store the actual Elnode server process too, in case we
+                           ;; wish to query it directly.
+                           :elnode-process (alist-get port elnode-server-socket)))
+        hrpc--running-servers)
+  ;; We ensure the servers will be stopped when Emacs is closed.
+  (add-hook 'kill-emacs-hook 'hrpc--stop-all-servers)
+  (message "http-rpc-server \"%s\" running on port %s" server-name port)
+  (hrpc--publish-session-file
+   server-name port username password
+   :publish-port publish-port
+   :publish-username publish-username
+   :publish-password publish-password)
+  server-name)
 
 
-(defun hrpc-stop-server ()
+(defun hrpc-stop-server (server-name)
   "Stop the active JSON-RPC 2.0 server.
 
 This method will fail if no server is running."
-  ;; Erase the port file up front, just in case it exists when the server is
-  ;; down.
-  (hrpc--erase-port-file)
-  (unless hrpc--current-server
-    (error "Server not running."))
-  (elnode-stop (hrpc--server-port hrpc--current-server))
-  (setq hrpc--current-server nil))
+  ;; Erase the server info file up front - it may exist even though the server
+  ;; isn't running.
+  (hrpc--erase-session-file server-name)
+  (hrpc--assert-server-running server-name)
+  (let* ((server (hrpc--get-server server-name))
+         (port (hrpc--server-port server)))
+    ;; Stop the actual HTTP process
+    (elnode-stop port)
+    ;; Remove the server from the list of running servers.
+    (setq hrpc--running-servers
+          (hrpc--alist-remove server-name hrpc--running-servers))))
 
 
-(defun hrpc--stop-server-safe (&rest _)
-  "Like `hrpc-stop-server', but this function will not raise errors.
-
-For example, it can safely be attached to the kill-emacs-hook."
-  (ignore-errors (hrpc-stop-server)))
+(defun hrpc--stop-server-safe (server-name &rest _)
+  "Like `hrpc-stop-server', but this function will not raise errors."
+  (ignore-errors (hrpc-stop-server server-name)))
 
 
-(defun hrpc-expose-function (func)
-  "Expose a function to remote procedure calls.
+(defun hrpc--stop-all-servers (&rest _)
+  "Stop all running HRPC servers.
 
-Only functions that have been exposed can be executed remotely
-via the JSON-RPC protocol.
+Their session information files will be cleaned up.
 
-Functions may only be invoked by name - lambda functions are not
-allowed (there would be no way to reference them remotely by
-name). `FUNC' is the function symbol to expose."
-  (add-to-list 'hrpc-exposed-functions func))
+This function is not intended to be used by the end-user. It
+should only be called when, for example, Emacs is closing."
+  (mapc 'hrpc--stop-server-safe
+        (hrpc--running-server-names)))
+
+
+(defun hrpc-expose-function (func server-name)
+  "Expose a function to remote procedure calls on a particular RPC server.
+
+Only functions that have been exposed on that server can be
+executed remotely via its API.
+
+`FUNC' is the function symbol to expose. Functions may only be
+invoked by name. Lambda functions are not allowed (there would be
+no way for the client to reference them by name).
+
+`SERVER-NAME' is the name of the server on which the function
+should be exposed."
+  (unless (symbolp func)
+    (error "`func' should be a symbol. Was type: %s. Value: %s"
+           (type-of func) func))
+  (hrpc--assert-server-running server-name)
+  (let ((server (hrpc--get-server server-name)))
+    (setf (hrpc--server-exposed-functions server)
+          (append (hrpc--server-exposed-functions server)
+                  (list func)))))
 
 
 (defun hrpc-hide-function (func)
@@ -526,7 +731,13 @@ name). `FUNC' is the function symbol to expose."
 `FUNC' is the function symbol to hide.
 
 This reverses `hrpc-expose-function'."
-  (setq hrpc-exposed-functions (remove func hrpc-exposed-functions)))
+  (unless (symbolp func)
+    (error "`func' should be a symbol. Was type: %s. Value: %s"
+           (type-of func) func))
+  (hrpc--assert-server-running server-name)
+  (let ((server (hrpc--get-server server-name)))
+    (setf (hrpc--server-exposed-functions server)
+          (hrpc--alist-remove func (hrpc--server-exposed-functions server)))))
 
 
 (provide 'http-rpc-server)
