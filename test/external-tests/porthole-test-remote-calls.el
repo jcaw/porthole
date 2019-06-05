@@ -43,7 +43,9 @@ buffer."
   (porthole-start-server porthole-test-server-name
                      ;; Have to expose a single method: `+'.
                      :exposed-functions '(+))
-  (message "server: %s" (porthole--get-server porthole-test-server-name))
+  ;; A little feedback.
+  (message "Server started: %s" (porthole--get-server
+                                 porthole-test-server-name))
   (let ((default-directory porthole-transport-layer-test-dir))
     (async-shell-command
      (format "nosetests %s" "test_external_calls.py")
