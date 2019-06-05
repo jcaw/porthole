@@ -773,5 +773,16 @@ This reverses `porthole-expose-function'."
 (add-hook 'kill-emacs-hook 'porthole--stop-all-servers)
 
 
+;; Elnode is very chatty. It logs a lot but it provides no mechanism to turn off
+;; logging for a specific server. The only way to turn it off is to disable it
+;; globally.
+(message "porthole: Disabling Elnode logging globally to prevent slowdown.")
+;; This prevents logs from cluttering messages. 
+(setq elnode-error-log-to-messages nil)
+;; TODO: Check if this is enough. How much logging will it take to slow down
+;;   Emacs? Do we need to disable all logging full stop?
+;; (setq elnode--do-error-logging nil)
+
+
 (provide 'porthole)
 ;;; porthole.el ends here
