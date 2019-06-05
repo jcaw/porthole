@@ -33,9 +33,6 @@ server."
   )
 
 
-
-
-
 (defconst porthole--on-linux (eq system-type 'gnu/linux)
   "Is this instance of Emacs running on Linux?")
 
