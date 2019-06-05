@@ -432,12 +432,6 @@ still be protected against."
     port))
 
 
-;; (defun porthole--erase-port-file ()
-;;   "Erase the port information file, if it exists."
-;;   (if (file-exists-p porthole--port-number-temp-file)
-;;       (delete-file porthole--port-number-temp-file nil)))
-
-
 (defun porthole--get-session-folder (server-name)
   "Get the session info folder for `SERVER-NAME'."
   ;; Session file should be at:
@@ -512,7 +506,7 @@ An error will be raised if it's not."
   (mapcar 'car porthole--running-servers))
 
 
-(defun porthole--get-server (server-name)
+(defun porthole-get-server (server-name)
   "Get the `porthole--server' with name `SERVER-NAME'.
 
 Returns nil if no server with this name is running."
@@ -523,7 +517,7 @@ Returns nil if no server with this name is running."
   "Returns t if a server with `SERVER-NAME' is already running.
 
 Note that server names are case-insensitive."
-  (if (porthole--get-server server-name) t nil))
+  (if (porthole-get-server server-name) t nil))
 
 
 (defun porthole--assert-server-running (server-name &optional message)
@@ -706,7 +700,7 @@ This method will fail if no server is running."
   ;; isn't running.
   (porthole--erase-session-file server-name)
   (porthole--assert-server-running server-name)
-  (let* ((server (porthole--get-server server-name))
+  (let* ((server (porthole-get-server server-name))
          (port (porthole--server-port server)))
     ;; Stop the actual HTTP process
     (elnode-stop port)
@@ -747,7 +741,7 @@ should be exposed."
     (error "`func' should be a symbol. Was type: %s. Value: %s"
            (type-of func) func))
   (porthole--assert-server-running server-name)
-  (let ((server (porthole--get-server server-name)))
+  (let ((server (porthole-get-server server-name)))
     (setf (porthole--server-exposed-functions server)
           (append (porthole--server-exposed-functions server)
                   (list func)))))
@@ -766,7 +760,7 @@ This reverses `porthole-expose-function'."
     (error "`func' should be a symbol. Was type: %s. Value: %s"
            (type-of func) func))
   (porthole--assert-server-running server-name)
-  (let ((server (porthole--get-server server-name)))
+  (let ((server (porthole-get-server server-name)))
     (setf (porthole--server-exposed-functions server)
           (porthole--alist-remove func (porthole--server-exposed-functions server)))))
 
