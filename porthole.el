@@ -503,6 +503,9 @@ still be protected against."
                                           (publish-password t))
   "Publish the current session's session info."
   ;; TODO: Flesh out docstring.
+  ;;
+  ;; Session file should be at:
+  ;; <porthole-info-dir>/<server-name>/session.json
   (let ((info '()))
     (when publish-port
       (push `(port . ,port)
