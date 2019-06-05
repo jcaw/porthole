@@ -677,7 +677,9 @@ running."
              :port port
              :host "localhost")
       (error "The Elnode server was not started. Reason unknown")))
-  ;; If we've reached this point, the server has started successfully.
+  ;; If we've reached this point, the Elnode server has started successfully.
+  ;; Now create a `porthole--server' object to wrap up all the server
+  ;; information and push it onto the list.
   (push (cons server-name (make-porthole--server
                            :name server-name
                            :port port
