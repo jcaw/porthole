@@ -4,7 +4,8 @@
  "The location of the hrpc `emacs-web-server'-based transport layer's tests.")
 
 
-(push (expand-file-name  (concat http-rpc-server--tests-directory ".."))
+(push (expand-file-name
+       (f-join http-rpc-server--tests-directory ".." ".."))
       load-path)
 
 
