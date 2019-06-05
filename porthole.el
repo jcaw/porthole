@@ -494,13 +494,13 @@ still be protected against."
 
 
 (cl-defun porthole--publish-session-file (name
-                                      port
-                                      username
-                                      password
-                                      &key
-                                      (publish-port t)
-                                      (publish-username t)
-                                      (publish-password t))
+                                          port
+                                          username
+                                          password
+                                          &key
+                                          (publish-port t)
+                                          (publish-username t)
+                                          (publish-password t))
   "Publish the current session's session info."
   ;; TODO: Flesh out docstring.
   (let ((info '()))
@@ -604,25 +604,25 @@ specifying the username, port or password) please refer to
   (let ((username (porthole--random-sha256-key))
         (password (porthole--random-sha256-key)))
     (porthole-start-server-advanced name
-                                :port 0
-                                :username username
-                                :password password
-                                :publish-port t
-                                :publish-username t
-                                :publish-password t
-                                :exposed-functions exposed-functions)))
+                                    :port 0
+                                    :username username
+                                    :password password
+                                    :publish-port t
+                                    :publish-username t
+                                    :publish-password t
+                                    :exposed-functions exposed-functions)))
 
 
 (cl-defun porthole-start-server-advanced (server-name
-                                      &key
-                                      (port 0)
-                                      (username nil)
-                                      (password nil)
-                                      (publish-port t)
-                                      ;; TODO: Maybe combine into "publish-credentials"?
-                                      (publish-username t)
-                                      (publish-password t)
-                                      (exposed-functions '()))
+                                          &key
+                                          (port 0)
+                                          (username nil)
+                                          (password nil)
+                                          (publish-port t)
+                                          ;; TODO: Maybe combine into "publish-credentials"?
+                                          (publish-username t)
+                                          (publish-password t)
+                                          (exposed-functions '()))
   "Start a new JSON-RPC 2.0 server.
 
 JSON-RPC requests to the server should be sent in the body of
