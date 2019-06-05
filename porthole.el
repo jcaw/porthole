@@ -174,10 +174,6 @@ Returns a new alist without those elements."
     (secure-hash 'sha256 long-random-number)))
 
 
-(defun porthole--send-400 (httpcon message)
-  (elnode-send-400 httpcon message))
-
-
 (defun porthole--extract-content (httpcon)
   "Extract the body of an HTTP request.
 
