@@ -76,6 +76,7 @@ server."
          ;; TODO: Mac temp dir
          (error "Not Implemented on Mac yet"))
         (t
+         ;; TODO: Fall back to the home dir on unknown systems.
          (display-warning
           "porthole"
           (concat "Unrecognised system type. Don't know where to find the "
