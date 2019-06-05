@@ -662,6 +662,8 @@ running."
                                "Tried to start on a free port %s times."
                                " Failed each time. Server could not be started.")
                               max-attempts))))
+    ;; TODO: Maybe explicitly check to see if this port is free across the
+    ;; board?
     (when (alist-get port elnode-server-socket)
       (error "Elnode already has a server running on this port."))
     (elnode-start
