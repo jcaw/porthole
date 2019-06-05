@@ -670,10 +670,13 @@ running."
     ;; board?
     (when (alist-get port elnode-server-socket)
       (error "Elnode already has a server running on this port."))
-    (elnode-start
-     'porthole--handle-request
-     :port port
-     :host "localhost"))
+      ;; Have to manually check that Elnode doesn't have a server on this port,
+      ;; because it will fail silently otherwise.
+    (unless (elnode-start
+             'porthole--handle-request
+             :port port
+             :host "localhost")
+      (error "The Elnode server was not started. Reason unknown")))
   ;; If we've reached this point, the server has started successfully.
   (push (cons server-name (make-porthole--server
                            :name server-name
