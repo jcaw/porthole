@@ -40,11 +40,11 @@ server."
   "Is this instance of Emacs running on Linux?")
 
 
-(defconst porthole--on-windows (eq (system-type 'windows-nt))
+(defconst porthole--on-windows (eq system-type 'windows-nt)
   "Is this instance of Emacs running on Windows?")
 
 
-(defconst porthole--on-mac (eq (system-type 'darwin))
+(defconst porthole--on-mac (eq system-type 'darwin)
   "Is this instance of Emacs running on MacOS?")
 
 
