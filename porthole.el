@@ -704,7 +704,7 @@ This method will fail if no server is running."
 
 
 (defun porthole--stop-all-servers (&rest _)
-  "Stop all running PORTHOLE servers.
+  "Stop all running `porthole' servers.
 
 Their session information files will be cleaned up.
 
