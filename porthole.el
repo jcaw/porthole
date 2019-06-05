@@ -33,6 +33,76 @@ server."
   )
 
 
+
+
+
+(defconst porthole--on-linux (eq system-type 'gnu/linux)
+  "Is this instance of Emacs running on Linux?")
+
+
+(defconst porthole--on-windows (eq (system-type 'windows-nt))
+  "Is this instance of Emacs running on Windows?")
+
+
+(defconst porthole--on-mac (eq (system-type 'darwin))
+  "Is this instance of Emacs running on MacOS?")
+
+
+(defun porthole--get-linux-temp-dir ()
+  "Get a user-only temp dir on Linux, to store the server info in."
+  ;; If the runtime dir isn't available, fall back to the home dir.
+  (or (getenv "XDG_RUNTIME_DIR")
+      (let ((home (getenv "HOME")))
+        (if home
+            (progn
+              (display-warning
+               "porthole"
+               (concat "$XDG_RUNTIME_DIR environment variable not set. Using "
+                       "$HOME/tmp as the base temp directory instead."))
+              (f-join home "/tmp"))
+          (display-warning
+           "porthole"
+           (concat "Neither $XDG_RUNTIME_DIR nor $HOME could be read from "
+                   "the environment. Clients will not be able to automatically "
+                   "connect to the server by reading the temp file."))))))
+
+
+(defconst porthole--base-temp-dir
+  (cond (porthole--on-linux
+         (porthole--get-linux-temp-dir))
+        (porthole--on-windows
+         (getenv "TEMP"))
+        (porthole--on-mac
+         ;; TODO: Mac temp dir
+         (error "Not Implemented on Mac yet"))
+        (t
+         (display-warning
+          "porthole"
+          (concat "Unrecognised system type. Don't know where to find the "
+                  "temp directory. Clients will not be able to automatically "
+                  "read the RPC server's configuration"))))
+  "The base temp directory to use.
+
+This will be dependent on the current system.")
+
+
+(defconst porthole--session-info-dir
+  (when porthole--base-temp-dir
+    (f-join porthole--base-temp-dir "emacs-porthole"))
+  "Directory in which to store files relating to the current server session.
+
+This is a known name, so clients can also read it and gather
+relevant information.")
+
+
+(defconst porthole--session-file-name "session.json"
+  "Local filename for a session info file.
+
+"
+  ;; TODO: Flesh out session file name docstring
+  )
+
+
 (defun porthole--case-insensitive-comparison (string1 string2)
   "Check if two objects are identical strings, case insensitive.
 
@@ -343,114 +413,6 @@ The details of the response should be specified in
                  (list (alist-get 'response-code response-alist))
                  (alist-get 'headers response-alist)))
   (elnode-http-return httpcon (alist-get 'content response-alist)))
-
-
-(defun porthole--on-linux ()
-  "Is this instance of Emacs running on Linux?"
-  (eq system-type 'gnu/linux))
-
-
-(defun porthole--on-windows ()
-  "Is this instance of Emacs running on Windows?"
-  (eq (system-type 'windows-nt)))
-
-
-(defun porthole--on-mac ()
-  "Is this instance of Emacs running on MacOS?"
-  (eq (system-type 'darwin)))
-
-
-(defun porthole--get-linux-temp-dir ()
-  "Get a user-only temp dir on Linux, to store the server info in."
-  ;; If the runtime dir isn't available, fall back to the home dir.
-  (or (getenv "XDG_RUNTIME_DIR")
-      (let ((home (getenv "HOME")))
-        (if home
-            (progn
-              (display-warning
-               "porthole"
-               (concat "$XDG_RUNTIME_DIR environment variable not set. Using "
-                       "$HOME/tmp as the base temp directory instead."))
-              (f-join home "/tmp"))
-          (display-warning
-           "porthole"
-           (concat "Neither $XDG_RUNTIME_DIR nor $HOME could be read from "
-                   "the environment. Clients will not be able to automatically "
-                   "connect to the server by reading the temp file."))))))
-
-
-(defconst porthole--base-temp-dir
-  (cond ((porthole--on-linux)
-         (porthole--get-linux-temp-dir))
-        ((porthole--on-windows
-          (getenv "TEMP")))
-        ((porthole--on-mac)
-         ;; TODO: Mac temp dir
-         (error "Not Implemented on Mac yet"))
-        (t
-         (display-warning
-          "porthole"
-          (concat "Unrecognised system type. Don't know where to find the "
-                  "temp directory. Clients will not be able to automatically "
-                  "read the RPC server's configuration"))))
-  "The base temp directory to use.
-
-This will be dependent on the current system.")
-
-
-(defconst porthole--session-info-dir
-  (when porthole--base-temp-dir
-    (f-join porthole--base-temp-dir "emacs-porthole"))
-  "Directory in which to store files relating to the current server session.
-
-This is a known name, so clients can also read it and gather
-relevant information.")
-
-
-(defconst porthole--session-file-name "session.json"
-  "Local filename for a session info file.
-
-"
-  ;; TODO: Flesh out session file name docstring
-  )
-
-
-;; (defun porthole--publish-port (port)
-;;   "Write the server's port number to a temporary file.
-
-;; This file is used so clients can determine which port the server
-;; was dynamically allocated at creation. It is not necessary if a
-;; fixed port was used, but it can still be useful to reduce setup."
-;;   (if porthole--port-number-temp-file
-;;       (progn
-;;         ;; Make at least some effort to clean up the port file when Emacs is closed.
-;;         ;; This will only clean it up when `kill-emacs' is called, but it's better
-;;         ;; than nothing.
-;;         (add-hook 'kill-emacs-hook 'porthole--erase-port-file)
-;;         (unwind-protect
-;;             (progn
-;;               (find-file porthole--port-number-temp-file)
-;;               ;; Erase any existing port information.
-;;               (erase-buffer)
-;;               (insert (format "%s" port))
-;;               ;; Create the rpc server's subdir if it doesn't exist in the temp
-;;               ;; folder.
-;;               (unless (file-directory-p porthole--session-info-dir)
-;;                 (make-directory porthole--session-info-dir))
-;;               ;; Possible race condition here if the temp dir is cleaned up
-;;               ;; between these two operations. Very small chance though, and all
-;;               ;; that will happen is the user will be prompted to confirm the
-;;               ;; directory creation.
-;;               (write-file porthole--port-number-temp-file nil)
-;;               (message
-;;                (concat
-;;                 "JSON-RPC server port written to \"%s\". This file can "
-;;                 "be used by clients to determine the port to connect to.")
-;;                porthole--port-number-temp-file))
-;;           (kill-current-buffer)))
-;;     (display-warning
-;;      "porthole"
-;;      "The server's session information will not be published.")))
 
 
 (defun porthole--find-free-port (host)
