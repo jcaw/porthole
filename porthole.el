@@ -725,10 +725,13 @@ should be exposed."
                   (list func)))))
 
 
-(defun porthole-hide-function (func)
-  "Hide a function from remote procedure calls.
+(defun porthole-hide-function (func server-name)
+  "Hide a function from remote procedure calls on a server.
 
 `FUNC' is the function symbol to hide.
+
+`SERVER-NAME' is the name of the server on which the function
+should be hidden.
 
 This reverses `porthole-expose-function'."
   (unless (symbolp func)
