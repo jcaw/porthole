@@ -1,8 +1,8 @@
 <p align=center>
-    <img src="media/logo.png" alt="http-rpc-server logo" />
+    <img src="media/logo.png" alt="porthole logo" />
 </p>
 
-<h1 align=center>HTTP-RPC-Server</h1>
+<h1 align=center>Porthole</h1>
 
 <p align=center>An RPC server for Emacs. Control Emacs from outside Emacs, using HTTP.</p>
 
@@ -89,11 +89,11 @@ Just register the commands you want to be available, start the server, and make
 requests via HTTP. Functions will be executed in the current Emacs session, and
 the results returned to your client.
 
-If you want a layer of protection, `http-rpc-server` has support for [Basic
+If you want a layer of protection, `porthole` has support for [Basic
 Authentication](https://en.wikipedia.org/wiki/Basic_access_authentication). It's
 easy to enable. Just supply a username and/or password when starting the server.
 
-Functions in this package are prefixed with `hrpc-`.
+Functions in this package are prefixed with `porthole-`.
 
 ## The JSON-RPC 2.0 Protocol
 
@@ -119,7 +119,7 @@ Start a server with the default configuration:
 ;; Functions have to be exposed before they can be invoked remotely.
 (jrpc-expose-function 'insert)
 ;; Start a server with the default configuration.
-(hrpc-start-server)
+(porthole-start-server)
 ```
 
 By default, the server will request a dynamic port and write this information to
@@ -158,7 +158,7 @@ Start a server on a specific port:
 ;; Functions have to be exposed before they can be invoked remotely.
 (jrpc-expose-function 'insert)
 ;; Start a server on port 8000 with basic auth. Don't publish the port number.
-(hrpc-start-server
+(porthole-start-server
  :PORT 8000
  :USERNAME "my_username"
  :PASSWORD "my_password"

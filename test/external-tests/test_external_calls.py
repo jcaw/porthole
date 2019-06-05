@@ -5,7 +5,7 @@
 It is designed to leverage Python's nosetests.
 
 Do not run these tests directly. Use the provided elisp file,
-`test-http-rpc-server.el`. It contains a function which will set up an instance
+`test-porthole.el`. It contains a function which will set up an instance
 of the server and run these tests against it.
 
 """
@@ -43,7 +43,7 @@ else:
 
 
 SESSION_INFO_FILENAME = os.path.join(
-    temp_dir, "emacs-http-rpc-server", TEST_SERVER_NAME, "session.json"
+    temp_dir, "emacs-porthole", TEST_SERVER_NAME, "session.json"
 )
 
 
@@ -204,7 +204,7 @@ def test_no_authentication():
 
 
 def test_wrong_auth_method_digest():
-    # `http-rpc-server` only supports Basic Authentication at the moment.
+    # `porthole` only supports Basic Authentication at the moment.
     # Passing the wrong authentication should trigger a 401 response.
     auth = requests.auth.HTTPDigestAuth(USERNAME, PASSWORD)
     response = requests.post(TEST_ADDRESS, json=SUM_REQUEST, auth=auth)

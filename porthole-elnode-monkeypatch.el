@@ -72,5 +72,5 @@ The port is chosen randomly from the ephemeral ports. "
   )
 
 
-(provide 'http-rpc-server-elnode-monkeypatch)
-;;; http-rpc-server-elnode-monkeypatch.el ends here
+(provide 'porthole-elnode-monkeypatch)
+;;; porthole-elnode-monkeypatch.el ends here
