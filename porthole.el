@@ -65,7 +65,7 @@ non-string is supplied."
 (defun porthole--similar-keys (key1 key2)
   "Are two keys the same at a fundamental level?
 
-This is a utility function for `porthole-alist-get'. It compares
+This is a utility function for `porthole--alist-get'. It compares
 keys. Symbol keys can match string keys, and all keys are
 compared case-insensitively.
 
@@ -79,7 +79,7 @@ See `htpc-alist-get' for usage examples."
   (porthole--case-insensitive-comparison key1 key2))
 
 
-(defun porthole-alist-get (key alist)
+(defun porthole--alist-get (key alist)
   "Like `alist-get', but much more flexible.
 
 `KEY' is the key to query.
@@ -155,7 +155,7 @@ to construct a response.
     ;; Only perform authentication when a username or password are required.
     ;; Otherwise, it's authenticated by default.
     (when (or target-username target-password)
-      (let ((authorization (porthole-alist-get "Authorization" headers)))
+      (let ((authorization (porthole--alist-get "Authorization" headers)))
         (unless authorization
           (signal 'porthole-401-error "authentication required"))
         ;; The code below that actually parses the authorization header is
@@ -239,7 +239,7 @@ client with the result."
             (porthole-server (porthole--server-from-httpcon httpcon)))
         ;; Authenticate first
         (porthole--assert-authenticated headers porthole-server)
-        (let ((content-type (porthole-alist-get "Content-Type" headers)))
+        (let ((content-type (porthole--alist-get "Content-Type" headers)))
           (unless content-type
             (signal 'porthole-invalid-http-request
                     (format "No `Content-Type` provided.")))
@@ -499,7 +499,7 @@ An error will be raised if it's not."
   "Get the `porthole--server' with name `SERVER-NAME'.
 
 Returns nil if no server with this name is running."
-  (porthole-alist-get server-name porthole--running-servers))
+  (porthole--alist-get server-name porthole--running-servers))
 
 
 (defun porthole--server-running-p (server-name)
