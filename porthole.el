@@ -33,17 +33,6 @@ server."
   )
 
 
-(define-error 'porthole--400-error "The HTTP request was not valid")
-(define-error 'porthole--malformed-http-request
-  "The request was malformed"
-  'porthole--400-error)
-(define-error 'porthole--invalid-http-request
-  "The request was invalid"
-  'porthole--400-error)
-(define-error 'porthole--401-error
-  "Authentication required")
-
-
 (defun porthole--case-insensitive-comparison (string1 string2)
   "Check if two objects are identical strings, case insensitive.
 
@@ -133,11 +122,10 @@ its own function to enable custom body handling."
      (point-max))))
 
 
-(defun porthole--assert-authenticated (headers porthole-server)
-  "Ensure a request had valid authentication.
+(defun porthole--authenticate (headers porthole-server)
+  "Ensure a request has valid authentication.
 
-If not, a relevant `porthole-' error will be raised that can be used
-to construct a response.
+If not, a 401 response trigger will be thrown.
 
 `HEADERS' should be an alist of the headers, extracted from the
 `elnode' httpcon object."
@@ -148,7 +136,7 @@ to construct a response.
     (when (or target-username target-password)
       (let ((authorization (porthole--alist-get "Authorization" headers)))
         (unless authorization
-          (signal 'porthole--401-error "authentication required"))
+          (porthole--end-unauthenticated "authentication required"))
         ;; The code below that actually parses the authorization header is
         ;; ripped from `web-server.el' by Eric Schulte. See the method
         ;; `ws-parse' for more information.
@@ -156,14 +144,14 @@ to construct a response.
         (let ((protocol (match-string 1 authorization))
               (credentials (match-string 2 authorization)))
           (unless protocol
-            (signal 'porthole--malformed-http-request "Invalid authorization string"))
+            (porthole--end-400 "Invalid authorization string"))
           (unless credentials
-            (signal 'porthole--malformed-http-request "No credentials provided"))
+            (porthole--end-400 "No credentials provided"))
           (unless (porthole--case-insensitive-comparison
                    protocol "basic")
             ;; If they've supplied the wrong protocol, just tell them
             ;; authentication is required.
-            (signal 'porthole--401-error "authentication required"))
+            (porthole--end-unauthenticated "authentication required"))
           (let ((decoded-credentials (base64-decode-string credentials)))
             ;; Cover the case where we match at position 0.
             (if (integerp (string-match ":" decoded-credentials))
@@ -173,10 +161,9 @@ to construct a response.
                                                     (match-end 0))))
                   (unless (and (equal provided-username target-username)
                                (equal provided-password target-password))
-                    (signal 'porthole--401-error "invalid credentials")))
-              (signal 'porthole-malformed-request
-                      (format "bad credentials: \"%s\""
-                              decoded-credentials)))))))))
+                    (porthole--end-unauthenticated "invalid credentials")))
+              (porthole--end-400 (format "bad credentials: \"%s\""
+                                         decoded-credentials)))))))))
 
 
 (defun porthole--server-from-port (port)
@@ -219,67 +206,143 @@ Throws an error if no object could be found."
       (error "%s" "No `porthole--server' could be found for `HTTPCON'")))
 
 
+(defun porthole--end (response-code
+                      headers
+                      content)
+  "Respond to the request and stop the handler.
+
+This method (or another method which calls it) should be used
+when a response needs to be sent. It will throw a signal to the
+top of the handler, telling the handler to respond to the client
+and return immediately.
+
+This is the lowest level method to end a handler. Ordinarily, a
+higher-level handler should be used.
+
+`RESPONSE-CODE' - the HTTP response code to send.
+
+`HEADERS' - the headers to send in the HTTP response. This should
+            include the Content-type.
+
+`CONTENT' - the content of the HTTP response."
+  (throw 'porthole-finish-handling `((response-code . ,response-code)
+                                     (headers       . ,headers)
+                                     (content       . ,content))))
+
+
+(defun porthole--end-simple (response-code
+                             content-type
+                             content)
+  "Respond to a porthole request and stop the handler.
+
+This is a wrapper that provides a simpler interface than the
+  underlying `porthole-end'."
+  (porthole--end response-code
+                 `(("Content-Type" . ,content-type))
+                 content))
+
+
+(defun porthole--end-400 (message)
+  "End processing of a handler and respond with a 400 response."
+  (porthole--end-simple 400 "text/html" message))
+
+
+(defun porthole--end-unauthenticated (message)
+  "End processing of a handler and respond with a 401 response."
+  (porthole--end 401
+                 '(("WWW-Authenticate" . "Basic realm=\"emacs-rpc-server\"")
+                   ("Content-Type" . "text/html"))
+                 message))
+
+
+(defun porthole--end-success (json-response)
+  "End processing of a handler with a successful JSON response."
+  (unless (stringp json-response)
+    (error "`JSON-RESPONSE' should be string. Was: %s" (type-of json-response)))
+  (porthole--end-simple 200 "application/json" json-response))
+
+
+(defun porthole--end-error-with-info (err)
+  "End the handler and feed the error information back to the client.
+
+The response will be a 500 response"
+  (porthole--end-simple 500 "application/json"
+                        (json-encode
+                         `((details . ((error-symbol ,(car err))
+                                       (data ,(cdr err))))))))
+
+
+(defun porthole--end-error-no-info ()
+  "End the handler. Do not share error information with the client.
+
+The client will receive a 500 response."
+  (porthole--end-simple 500 "application/json"
+                        (json-encode
+                         `((details . :json-null)))))
+
+
+(defun porthole--handle-authenticated (httpcon headers porthole-server)
+  "Handle a request, after it's been authenticated.
+
+The authentication process require the `HEADERS' and the
+`PORTHOLE-SERVER' to be extracted from the `HTTPCON' object.
+These should also be passed to avoid duplication of effort."
+  (condition-case-unless-debug err
+      (let ((content-type (porthole--alist-get "Content-Type" headers)))
+        (unless content-type
+          (porthole--end-400 "No `Content-Type` provided."))
+        (unless (porthole--case-insensitive-comparison
+                 (format "%s" content-type)
+                 "application/json")
+          (porthole--end-400
+           (format "`Content-Type` should be application/json. Was: %s"
+                   content-type)))
+        (let ((content (porthole--extract-content httpcon)))
+          (unless content
+            (porthole--end-400 "Content could not be extracted from the request."))
+          (let* ((exposed-functions (porthole--server-exposed-functions
+                                     porthole-server))
+                 (porthole-response (jrpc-handle content exposed-functions)))
+            (porthole--end-success porthole-response))))
+    ;; Catch unexpected errors.
+    (error
+     ;; Since the user is authenticated, we can share information about the
+     ;; underlying error with the client.
+     (porthole--end-error-with-info err))))
+
+
 (defun porthole--handle-request (httpcon)
   "Handle a JSON-RPC request.
 
 This method extracts the underlying JSON-RPC request and passes
 it to the RPC layer to be executed. It then responds to the
 client with the result."
-  (condition-case err
-      (let ((headers (elnode-http-headers httpcon))
-            (porthole-server (porthole--server-from-httpcon httpcon)))
-        ;; Authenticate first
-        (porthole--assert-authenticated headers porthole-server)
-        (let ((content-type (porthole--alist-get "Content-Type" headers)))
-          (unless content-type
-            (signal 'porthole--invalid-http-request
-                    (format "No `Content-Type` provided.")))
-          (unless (porthole--case-insensitive-comparison
-                   (format "%s" content-type)
-                   "application/json")
-            (signal 'porthole--invalid-http-request
-                    (format
-                     "`Content-Type` should be application/json. Was: %s"
-                     content-type)))
-          (let ((content (porthole--extract-content httpcon)))
-            (unless content
-              (signal 'porthole--invalid-http-request
-                      "Content could not be extracted from the request."))
-            (let* ((exposed-functions (porthole--server-exposed-functions porthole-server))
-                   (porthole-response (jrpc-handle content exposed-functions)))
-              (elnode-http-start httpcon 200 '("Content-Type" . "application/json"))
-              (elnode-http-return httpcon porthole-response)))))
-    (porthole--401-error
-     (porthole--send-401 httpcon (cdr err)))
-    (porthole--400-error
-     (porthole--send-400 httpcon (cdr err)))
-    (error
-     (elnode-send-500 httpcon (format "An internal error occurred. Error: %s"
-                                      err)))))
+  (porthole--respond
+   httpcon
+   (catch 'porthole-finish-handling
+     (condition-case-unless-debug err
+         (let ((headers (elnode-http-headers httpcon))
+               (porthole-server (porthole--server-from-httpcon httpcon)))
+           ;; Authenticate first
+           (porthole--authenticate headers porthole-server)
+           (porthole--handle-authenticated httpcon headers porthole-server))
+       ;; Catch unexpected errors.
+       (error
+        ;; Before authentication, we send no details about the internal error.
+        (porthole--end-error-no-info))))))
 
 
-(defun porthole--send-401 (httpcon &optional message)
-  (elnode-http-start httpcon 401
-                     '("WWW-Authenticate" . "Basic realm=\"emacs-rpc-server\"")
-                     '("Content-Type" . text/html))
-  (elnode-http-return httpcon (or message
-                                  "authentication required")))
+(defun porthole--respond (httpcon response-alist)
+  "Send a response to an HTTP request.
 
-
-(defun porthole--server-port (elnode-server-instance)
-  "Get the actual port an `elnode-server' is running on.
-
-By default, `ws-server' objects store the port which was given as
-input to create the server. This may not actually be the port the
-server is running on. For example, if a server was created with
-dynamic port allocation, the `ws-server' object may have the port
-stored as \"0\" or t - even though the network process was
-allocated a specific port.
-
-This method bypasses the flawed `ws-server' implementation and
-extract the actual port from the underlying network process."
-  ;; (process-contact (oref ws-server-instance process) :service)
-  (warn "Port getting not implemented"))
+The details of the response should be specified in
+`RESPONSE-ALIST'. This should be an alist thrown by
+`porthole--end'."
+  (apply 'elnode-http-start
+         (append (list httpcon)
+                 (list (alist-get 'response-code response-alist))
+                 (alist-get 'headers response-alist)))
+  (elnode-http-return httpcon (alist-get 'content response-alist)))
 
 
 (defun porthole--on-linux ()
