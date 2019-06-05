@@ -41,8 +41,8 @@ buffer."
   (ignore-errors (porthole-stop-server porthole-test-server-name))
   ;; Start the test on an automatically assigned port.
   (porthole-start-server porthole-test-server-name
-                     ;; Have to expose a single method: `+'.
-                     :exposed-functions '(+))
+                         ;; Have to expose a single method: `+'.
+                         :exposed-functions '(+))
   ;; A little feedback.
   (message "Server started: %s" (porthole--get-server
                                  porthole-test-server-name))
