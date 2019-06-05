@@ -664,14 +664,14 @@ running."
           ;; If the server could not be started after many retries, we just raise an error.
           (error "%s" (format (concat
                                "Tried to start on a free port %s times."
-                               " Failed each time. Server could not be started.")
+                               " Failed each time. Server could not be started")
                               max-attempts))))
     ;; TODO: Maybe explicitly check to see if this port is free across the
     ;; board?
     (when (alist-get port elnode-server-socket)
-      (error "Elnode already has a server running on this port."))
       ;; Have to manually check that Elnode doesn't have a server on this port,
       ;; because it will fail silently otherwise.
+      (error "Elnode already has a server running on this port"))
     (unless (elnode-start
              'porthole--handle-request
              :port port
