@@ -481,6 +481,15 @@ Also deletes the server's session folder."
       (f-delete info-folder t))))
 
 
+(defun porthole--assert-symbol (symbol)
+  "Ensure that `SYMBOL' is actually a symbol.
+
+An error will be raised if it's not."
+  (unless (symbolp symbol)
+    (error "%s" (format "Not a symbol. Type: %s. Value: %s"
+                        (type-of symbol) symbol))))
+
+
 (defun porthole--running-server-names ()
   "Get the names of all running servers."
   (mapcar 'car porthole--running-servers))
@@ -601,6 +610,8 @@ Note that this method will fail if the server is already
 running."
   ;; TODO: server-name restriction. Only certain chars.
   (porthole--assert-server-not-running server-name)
+  ;; Every function name should be a symbol.
+  (mapc 'porthole--assert-symbol exposed-functions)
   ;; We have to handle dynamic ports differently.
   (if (member port '("0" 0 t))
       ;; Get a dynamic port. Please note, this CAN PRODUCE A RACE CONDITION if the
