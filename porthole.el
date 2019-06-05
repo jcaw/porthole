@@ -439,6 +439,7 @@ still be protected against."
   (f-join porthole--session-info-dir server-name))
 
 
+;;;###autoload
 (defun porthole-get-session-file-path (server-name)
   "Get the path of the session file for server with name `SERVER-NAME'."
   ;; Session file should be at:
@@ -506,6 +507,7 @@ An error will be raised if it's not."
   (mapcar 'car porthole--running-servers))
 
 
+;;;###autoload
 (defun porthole-get-server (server-name)
   "Get the `porthole--server' with name `SERVER-NAME'.
 
@@ -539,6 +541,7 @@ Note that server names are case-insensitive."
                             server-name)))))
 
 
+;;;###autoload
 (cl-defun porthole-start-server (name &key (exposed-functions '()))
   "Start a server. `NAME' should be the name of the server.
 
@@ -570,6 +573,7 @@ specifying the username, port or password) please refer to
                                     :exposed-functions exposed-functions)))
 
 
+;;;###autoload
 (cl-defun porthole-start-server-advanced (server-name
                                           &key
                                           (port 0)
