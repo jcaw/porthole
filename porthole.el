@@ -690,8 +690,6 @@ running."
                            ;; wish to query it directly.
                            :elnode-process (alist-get port elnode-server-socket)))
         porthole--running-servers)
-  ;; We ensure the servers will be stopped when Emacs is closed.
-  (add-hook 'kill-emacs-hook 'porthole--stop-all-servers)
   (message "porthole: RPC server \"%s\" running on port %s" server-name port)
   (porthole--publish-session-file
    server-name port username password
@@ -772,6 +770,10 @@ This reverses `porthole-expose-function'."
   (let ((server (porthole-get-server server-name)))
     (setf (porthole--server-exposed-functions server)
           (porthole--alist-remove func (porthole--server-exposed-functions server)))))
+
+
+;; Ensure all servers are stopped when Emacs is closed.
+(add-hook 'kill-emacs-hook 'porthole--stop-all-servers)
 
 
 (provide 'porthole)
