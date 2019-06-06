@@ -44,7 +44,7 @@ buffer."
                          ;; Have to expose a single method: `+'.
                          :exposed-functions '(+))
   ;; A little feedback.
-  (message "Server started: %s" (porthole--get-server
+  (message "Server started: %s" (porthole-get-server
                                  porthole-test-server-name))
   (let ((default-directory porthole-transport-layer-test-dir))
     (async-shell-command
