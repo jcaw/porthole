@@ -93,11 +93,12 @@ relevant information.")
 
 
 (defconst porthole--session-file-name "session.json"
-  "Local filename for a session info file.
+  "Local filename where server session information is stored.
 
-"
-  ;; TODO: Flesh out session file name docstring
-  )
+This file is used to communicate session information to clients
+automatically. It will be a JSON-encoded object mapping names to
+values. Possible names are \"port\", \"username\" and
+\"password\".")
 
 
 (defun porthole--case-insensitive-comparison (string1 string2)
