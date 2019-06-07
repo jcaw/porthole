@@ -729,7 +729,31 @@ should only be called when, for example, Emacs is closing."
         (porthole--running-server-names)))
 
 
-;; TODO: Expose a list of functions
+(defun porthole-expose-functions (server-name funcs)
+  "Expose a list of functions to RPC calls on a particular Porthole server.
+
+Functions have to be exposed before they can be executed
+remotely. This is just like `porthole-expose-functions', but it
+allows you to expose many functions at once.
+
+Example call:
+
+  (porthole-expose-function \"pirate-server\"
+                            '(insert delete-char point))
+
+`SERVER-NAME' is the name of the server on which the function
+should be exposed.
+
+`FUNCS' is a list of function symbols to expose. For example:
+
+  '(insert magit-status)
+
+Supply a symbol, not a string. Lambda
+functions are not allowed (there would be no way for the client
+to reference them by name)."
+  (mapc (lambda (func)
+          porthole-expose-function server-name func)
+        functions))
 
 
 (defun porthole-expose-function (server-name func)
