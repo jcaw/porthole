@@ -70,8 +70,7 @@ server."
         (porthole--on-windows
          (getenv "TEMP"))
         (porthole--on-mac
-         ;; TODO: Mac temp dir
-         (error "Not Implemented on Mac yet"))
+         (substitute-in-file-name "$HOME/Library/"))
         (t
          ;; TODO: Fall back to the home dir on unknown systems.
          (display-warning
