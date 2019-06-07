@@ -757,17 +757,22 @@ to reference them by name)."
 
 
 (defun porthole-expose-function (server-name func)
-  "Expose a function to remote procedure calls on a particular RPC server.
+  "Expose a function to RPC calls on a particular Porthole server.
 
-Only functions that have been exposed on that server can be
-executed remotely via its API.
+Functions have to be exposed before they can be executed
+remotely.
 
-`FUNC' is the function symbol to expose. Functions may only be
-invoked by name. Lambda functions are not allowed (there would be
-no way for the client to reference them by name).
+Example call:
+
+  (porthole-expose-function \"pirate-server\" 'insert)
 
 `SERVER-NAME' is the name of the server on which the function
-should be exposed."
+should be exposed.
+
+`FUNC' is the function symbol to expose. For example, `insert' or
+`magit-status'. Supply a symbol, not a string. Lambda functions
+are not allowed (there would be no way for the client to
+reference them by name)."
   (unless (symbolp func)
     (error "`func' should be a symbol. Was type: %s. Value: %s"
            (type-of func) func))
