@@ -105,7 +105,9 @@ values. Possible names are \"port\", \"username\" and
   "Check if two objects are identical strings, case insensitive.
 
 Tolerates non-string input. Will simply return nil if a
-non-string is supplied."
+non-string is supplied.
+
+`STRING1' and `STRING2' are the strings to compare."
   (and (stringp string1) (stringp string2)
        (string= (downcase string1) (downcase string2))))
 
