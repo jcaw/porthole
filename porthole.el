@@ -732,8 +732,7 @@ should only be called when, for example, Emacs is closing."
 ;; TODO: Expose a list of functions
 
 
-;; TODO: Pick order for function exposing.
-(defun porthole-expose-function (func server-name)
+(defun porthole-expose-function (server-name func)
   "Expose a function to remote procedure calls on a particular RPC server.
 
 Only functions that have been exposed on that server can be
