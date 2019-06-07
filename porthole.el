@@ -537,6 +537,11 @@ Note that server names are case-insensitive."
                             server-name)))))
 
 
+(defun porthole--assert-valid-server-name (server-name)
+  (unless (string-match "^[a-zA-Z0-9-]+$" server-name)
+    (error "Server names may only contain alphanumeric characters and dashes")))
+
+
 ;;;###autoload
 (cl-defun porthole-start-server (name &key (exposed-functions '()))
   "Start a server. `NAME' should be the name of the server.
@@ -619,7 +624,7 @@ specification, although the server will also tolerate JSON-RPC
 
 Note that this method will fail if the server is already
 running."
-  ;; TODO: server-name restriction. Only certain chars.
+  (porthole--assert-valid-server-name server-name)
   (porthole--assert-server-not-running server-name)
   ;; Every function name should be a symbol.
   (mapc 'porthole--assert-symbol exposed-functions)
