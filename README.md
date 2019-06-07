@@ -25,7 +25,7 @@ up to you.
 
 ---
 
-<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc 
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc
 
     Please note that the markdown generator doesn't work perfectly with a
     centered heading, as above. It will need manual tweaking -->
@@ -70,7 +70,7 @@ Now, continue using Emacs.
 2. POST a JSON-RPC request to the server.
 
    _\*Emacs executes your RPC call and returns the result.\*_
-   
+
 3. Parse the JSON-RPC 2.0 object you received.
 
 That's it! There's even a [Python Client](https://github.com/jcaw/porthole-python-client) to handle the client-side automatically. See [Example 1](#example-1-quickstart-with-the-python-client) for a demonstration.
@@ -100,7 +100,7 @@ What if you could:
 
 All of these need some way of communicating with Emacs. Porthole acts as a
 foundation that allows Emacs to expose its functionality to other languages, in
-a way that's simple. 
+a way that's simple.
 
 ## Usage Examples
 
@@ -114,19 +114,19 @@ as they know the name.
 Let's say you want to write a Python package, `pyrate-ship`, that allows you to
 use Emacs as a calculator.
 
-<b>In Emacs:</b> 
+<b>In Emacs:</b>
 
 Starting a server is easy. All you need is a name:
 
 ```emacs-lisp
-;; Start a Porthole RPC server. 
+;; Start a Porthole RPC server.
 (porthole-start-server "pyrate-server")
-;; Functions have to be exposed before they can be invoked remotely. 
+;; Functions have to be exposed before they can be invoked remotely.
 ;; Let's expose the `+' function.
 (porthole-expose-function "pirate-server" '+)
 ```
 
-<b>In the Client:</b> 
+<b>In the Client:</b>
 
 The easiest way to send RPC calls to Porthole is with the [Porthole Python
 Client](https://github.com/jcaw/porthole-python-client). For now, let's use
@@ -156,7 +156,7 @@ def sum_in_emacs():
         print("Could not connect to the server.")
     except JsonRpcError as e:
         # This happens when a JSON-RPC response was returned, and it indicated
-        # an error. This normally means Emacs encountered an error executing 
+        # an error. This normally means Emacs encountered an error executing
         # the function.
         print("A JSON-RPC Error was returned. Details:", e.json_rpc_error)
 ```
@@ -167,7 +167,7 @@ It's easy to send RPC calls to Porthole servers yourself. Just POST some JSON.
 Here's the basic process:
 
 1. Read the server's port from the [session file](#session-information) (this
-will have a known path). 
+will have a known path).
 2. Send a POST request to `localhost:<port>` with the JSON-RPC 2.0 request
 encoded in the body.
 
@@ -187,12 +187,12 @@ Start the server, like in the last example:
 ```
 
 ```python
-import requests 
+import requests
 import json
 
 def pyrate_insert():
     server_name = "pyrate-server"
-    
+
     # Preparing a call is easy.
     rpc_call = {
         "jsonrpc": "2.0",
@@ -200,27 +200,27 @@ def pyrate_insert():
         "params": ["This is some text we want to insert"],
         "id": 23084
     }
-    
+
     # The session info is always stored in the same basic path. The `temp_dir`
-    # varies by platform - we'll explain how to manage that later. 
+    # varies by platform - we'll explain how to manage that later.
     temp_dir = os.environ.get("HOME")
     session_info_path = "{temp_dir}/emacs-porthole/{server_name}/session.json".format(
         temp_dir=temp_dir,
         server_name=server_name
     )
-    
+
     # Now, we load the server information from the file.
     if os.path.isfile(session_info_path):
         session_info = json.read(open(session_info_path))
     else:
         raise RuntimeError("Server does not appear to be running.")
-        
+
     # Finally, we can post our request to the server.
     address = "http://localhost:{}".format(session_info["port"])
     auth = requests.HTTPBasicAuth(session_info["username"],session_info["password"])
     response = requests.post(address, json=rpc_call, auth=auth)
     if response.status_code == 200:
-        # If the call is successful, the body will be a JSON-RPC 2.0 response. 
+        # If the call is successful, the body will be a JSON-RPC 2.0 response.
         # Decode it into Python, and return it.
         return response.json()
     else:
@@ -237,12 +237,12 @@ thorough client in another language.
 Automatic servers are the intended use case of Porthole. However, you may wish
 to configure the server manually. Here's an example:
 
-<b>In Emacs:</b> 
+<b>In Emacs:</b>
 
 Start a server on a specific port, with a specific username and password:
 
 ```emacs-lisp
-;; Start a server on port 8000 with basic authentication. 
+;; Start a server on port 8000 with basic authentication.
 ;; Don't publish any information about the server.
 (porthole-start-server
  "spanish-navy-server"
@@ -257,7 +257,7 @@ Start a server on a specific port, with a specific username and password:
 (porthole-expose-function "spanish-navy-server" 'revert-buffer)
 ```
 
-<b>In the Client:</b> 
+<b>In the Client:</b>
 
 Send a POST request to port 8000 with the JSON-RPC 2.0 request encoded in the
 body and the basic authentication credentials in the header.
@@ -275,9 +275,9 @@ rpc_call = {
     "params": [":ignore-auto" ":noconfirm"],
     "id": 23084
 }
-# This is just an example. In production, you would need much more error 
+# This is just an example. In production, you would need much more error
 # checking.
-response = requests.post("http://localhost:8000", 
+response = requests.post("http://localhost:8000",
                          json=rpc_call,
                          auth=("my_username", "my_password"))
 print(response.json())
@@ -324,10 +324,10 @@ In raw JSON:
   "jsonrpc": "2.0",
   "method": "a-cl-function",
   "params": [
-    "positional-arg", "'positional-symbol", ":keyword-1", "value-1", 
+    "positional-arg", "'positional-symbol", ":keyword-1", "value-1",
     ":another-keyword", "'symbol-value"
   ]
-  
+
 }
 ```
 
@@ -372,7 +372,7 @@ how it's derived:
 
 **Mac OS**
 
-`temp_dir` is set to `$HOME/Library`. The full path is: 
+`temp_dir` is set to `$HOME/Library`. The full path is:
 
 ```emacs-lisp
 ;; This is the path on Mac
@@ -401,7 +401,7 @@ If neither `$XDG_RUNTIME_DIR` or `$HOME` exist, no session file is created.
 **Unknown Systems**
 
 Porthole will make an effort to run on unknown systems. If the system is
-unknown, it will use the same method as Linux. 
+unknown, it will use the same method as Linux.
 
 
 ## What About Security?
@@ -428,7 +428,7 @@ instructions.
 
 ## Installation
 
-It will be installable from MELPA once I persuade them to add it (and the underlying 
+It will be installable from MELPA once I persuade them to add it (and the underlying
 [`json-rpc-server`](http://github.com/jcaw/json-rpc-server.el)).
 
 ## List of Clients
