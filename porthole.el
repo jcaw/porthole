@@ -577,15 +577,9 @@ Invalid:
 
 ;;;###autoload
 (cl-defun porthole-start-server (name &key (exposed-functions '()))
-  "Start a server. `NAME' should be the name of the server.
+  "Start a new Porthole server.
 
-`NAME' should be a string that references the server. It should
-be a unique name. Only alphanumeric characters and dashes are
-allowed.
-
-`EXPOSED-FUNCTIONS' is optional. If provided, these functions
-will immediately be available to call from the server when it is
-launched.
+`NAME' should be the name of the server.
 
 This is the intended way to start a server. The server will be
 started on a dynamically allocated port, with a random SHA-256
@@ -594,7 +588,17 @@ server's session file, which is accessible only to the user.
 
 If you would like more control over the server (for example,
 specifying the username, port or password) please refer to
-`porthole-start-server-advanced'."
+`porthole-start-server-advanced'.
+
+Arguments:
+
+`NAME' - This is the name Porthole uses to identify your server.
+  It should be simple, memorable and unique. Only alphanumeric
+  characters and dashes are allowed
+
+`:EXPOSED-FUNCTIONS' - A list of functions to expose immediately
+  upon server creation. See `porthole-expose-function' for more.
+  Default: nil"
   (let ((username (porthole--random-sha256-key))
         (password (porthole--random-sha256-key)))
     (porthole-start-server-advanced name
