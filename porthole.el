@@ -366,9 +366,10 @@ The client will receive a 500 response."
 (defun porthole--handle-authenticated (httpcon headers porthole-server)
   "Handle a request, after it's been authenticated.
 
-The authentication process require the `HEADERS' and the
-`PORTHOLE-SERVER' to be extracted from the `HTTPCON' object.
-These should also be passed to avoid duplication of effort."
+The authentication process requires the `HEADERS' and the
+`PORTHOLE-SERVER' to be extracted from the Elnode `HTTPCON'
+object. These should also be passed to avoid duplication of
+effort."
   (condition-case-unless-debug err
       (let ((content-type (porthole--alist-get "Content-Type" headers)))
         (unless content-type
