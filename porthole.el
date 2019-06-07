@@ -346,7 +346,8 @@ This is a wrapper that provides a simpler interface than the
 (defun porthole--end-error-with-info (err)
   "End the handler and feed the error information back to the client.
 
-The response will be a 500 response"
+`ERR' is the error that was raised. The response will be a 500
+response containing a JSON object that encapsulated this error."
   (porthole--end-simple 500 "application/json"
                         (json-encode
                          `((details . ((error-symbol ,(car err))
