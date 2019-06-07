@@ -296,10 +296,12 @@ and return immediately.
 This is the lowest level method to end a handler. Ordinarily, a
 higher-level handler should be used.
 
+Arguments:
+
 `RESPONSE-CODE' - the HTTP response code to send.
 
 `HEADERS' - the headers to send in the HTTP response. This should
-            include the Content-type.
+  include the Content-type.
 
 `CONTENT' - the content of the HTTP response."
   (throw 'porthole-finish-handling `((response-code . ,response-code)
