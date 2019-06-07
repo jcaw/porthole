@@ -809,7 +809,7 @@ This reverses `porthole-expose-function'."
 ;; logging for a specific server. The only way to turn it off is to disable it
 ;; globally.
 (message "porthole: Disabling Elnode logging globally to prevent slowdown.")
-;; This prevents logs from cluttering messages. 
+;; This prevents logs from cluttering messages.
 (setq elnode-error-log-to-messages nil)
 ;; TODO: Check if this is enough. How much logging will it take to slow down
 ;;   Emacs? Do we need to disable all logging full stop?
