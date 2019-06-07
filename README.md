@@ -357,34 +357,51 @@ will be predictable:
 "{temp_dir}/emacs-porthole/{server_name}/session.json"
 ```
 
-`temp_dir` represents a user-only temporary directory and it will be different
-depending on the platform. Here is how it's derived:
+`{server-name}` is the name of the server. `{temp_dir}` represents a user-only
+temporary directory and it will be different depending on the platform. Here is
+how it's derived:
 
 **Windows**
 
-`temp_dir` is set to `%temp%`. Thus, the path is `"%temp%/emacs-porthole/{server_name}/session.json"`.
+`temp_dir` is set to `%temp%`. The full path is:
 
-**Mac**
+```emacs-lisp
+;; This is the path on Windows
+"%temp%/emacs-porthole/{server_name}/session.json"
+```
 
-The temporary directory structure has not yet been worked out on Mac.
+**Mac OS**
+
+`temp_dir` is set to `$HOME/Library`. The full path is: 
+
+```emacs-lisp
+;; This is the path on Mac
+"$HOME/Library/emacs-porthole/{server_name}/session.json"
+```
 
 **Linux**
 
-`temp_dir` is set to the `$XDG_RUNTIME_DIR` environment variable, if it exists. However, some distributions do not have this variable. In that case, a tmp folder will be created in the user's home directory. Thus, the path will be:
+Linux is less predictable, so two methods are used.
+
+`temp_dir` is set to the `$XDG_RUNTIME_DIR` environment variable if it exists.
+Normally, it will. If it does not, it is set to `$HOME/tmp`.
+
+Thus, the full path is:
 
 ```pseudocode
+# This is the path on Linux
 if exists("$XDG_RUNTIME_DIR"):
     "$XDG_RUNTIME_DIR/emacs-porthole/{server_name}/session.json"
 else:
     "$HOME/tmp/emacs-porthole/{server_name}/session.json"
 ```
 
+If neither `$XDG_RUNTIME_DIR` or `$HOME` exist, no session file is created.
+
 **Unknown Systems**
 
-If Porthole encounters an unknown system type, it will check if there is a
-`HOME` environment variable. If so, a tmp directory is created and used on that
-path. Thus, for an unknown system the path is `"$HOME/tmp/emacs-porthole/{server_name}/session.json"`
-
+Porthole will make an effort to run on unknown systems. If the system is
+unknown, it will use the same method as Linux. 
 
 
 ## What About Security?
