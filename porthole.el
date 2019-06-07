@@ -420,7 +420,9 @@ client with the result."
 
 The details of the response should be specified in
 `RESPONSE-ALIST'. This should be an alist thrown by
-`porthole--end'."
+`porthole--end'.
+
+`HTTPCON' is the Elnode HTTP connection object."
   (apply 'elnode-http-start
          (append (list httpcon)
                  (list (alist-get 'response-code response-alist))
