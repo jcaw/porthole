@@ -134,9 +134,6 @@ See `htpc-alist-get' for usage examples.
 (defun porthole--alist-get (key alist)
   "Like `alist-get', but much more flexible.
 
-`KEY' is the key to query.
-`ALIST' is the alist to search.
-
 Will match symbols against strings. Will also match strings
 case-insensitively.
 
@@ -150,7 +147,13 @@ For example:
 
   - The symbol 'key will match the symbol 'KEY
 
-  - The symbol 'key will NOT match the symbol 'keys"
+  - The symbol 'key will NOT match the symbol 'keys
+
+Arguments:
+
+`KEY' - the key to query.
+
+`ALIST' - the alist to search."
   (let ((pair (assoc key alist 'porthole--similar-keys)))
     (and pair
          (eq (type-of pair) 'cons)
