@@ -621,45 +621,60 @@ Arguments:
                                           (publish-username t)
                                           (publish-password t)
                                           (exposed-functions '()))
-  "Start a new JSON-RPC 2.0 server.
+  "Start a new Porthole server with advanced configuration.
 
 JSON-RPC requests to the server should be sent in the body of
 POST requests. They should be sent according to the JSON-RPC 2.0
 specification, although the server will also tolerate JSON-RPC
 1.x requests. JSON-RPC protocols >2.0 are not supported.
 
-# Port
+The server optionally supports Basic Access Authentication to
+authenticate RPC requests:
 
-  The server will be allocated a random port when it is started.
-  This will be printed to the message buffer. Use the keyword
-  argument `:PORT' to specify a port to the server.
+  https://en.wikipedia.org/wiki/Basic_access_authentication
 
-  If the port is dynamically allocated, clients need to be able
-  to discover it. To achieve this, port information can be
-  written to a known file in the user's home dir. The flag
-  `:PUBLISH-PORT' controls whether this file is created or not.
-  By default, it is t, meaning the port information will be
-  published.
+If you would like to use Basic Access Authentication, specify the
+keyword arguments `:USERNAME' or `:PASSWORD'. You do not need to
+provide both (although it is obviously recommended). For example,
+if you provide only a password, the empty string will be used for
+the username.
 
-  See the README for a full explanation of how to configure
-  clients.
+By default, session information is written to a known file so
+local clients can connect automatically. This file is only
+accessible to the current user. See the README for a full
+explanation of how to configure clients. This behavior is
+configurable - see the arguments for more.
 
-# Authentication
+Arguments:
 
-  The server optionally supports Basic Access Authentication to
-  authenticate RPC requests:
+`SERVER-NAME' - This is the name Porthole uses to identify your
+  server. It should be simple, memorable and unique. Server
+  creation will fail if a server with the same name is already
+  running. This argument is mandatory.
 
-    https://en.wikipedia.org/wiki/Basic_access_authentication
+`:PORT' - the port the server will run on. Use a value of 0 to
+  have the server start on a dynamic port. Default: 0
 
-  By default, the server will be started with no authentication.
-  If you would like to use Basic Access Authentication, specify
-  the keyword arguments `:USERNAME' or `:PASSWORD'. You do not
-  need to provide both (although it is obviously recommended).
-  For example, if you provide only a password, the empty string
-  will be used for the username.
+`:USERNAME' - The username to use for Basic Authentication. If
+  this and the password are unspecified, no authentication will
+  be used. Default: nil
 
-Note that this method will fail if the server is already
-running."
+`:PASSWORD' - The password to use for Basic Authentication. If
+  this and the username are unspecified, no authentication will
+  be used. Default: nil
+
+`:PUBLISH-PORT' - Whether to publish the server's port to the
+  server's session file. Default: t
+
+`:PUBLISH-USERNAME' - Whether to publish the server's username to
+  the server's session file. Default: t
+
+`:PUBLISH-PASSWORD' - Whether to publish the server's password to
+  the server's session file. Default: t
+
+`:EXPOSED-FUNCTIONS' - A list of functions to expose immediately
+  upon server creation. See `porthole-expose-function' for more.
+  Default: nil"
   (porthole--assert-valid-server-name server-name)
   (porthole--assert-server-not-running server-name)
   ;; Every function name should be a symbol.
