@@ -559,6 +559,18 @@ Note that server names are case-insensitive."
 
 
 (defun porthole--assert-valid-server-name (server-name)
+  "Ensure `SERVER-NAME' is a valid server name.
+
+Server names may only contain alphanumeric characters, and
+dashes.
+
+Valid:
+
+  \"my-server-02\"
+
+Invalid:
+
+  \"a_server_with? punctuation\""
   (unless (string-match "^[a-zA-Z0-9-]+$" server-name)
     (error "Server names may only contain alphanumeric characters and dashes")))
 
