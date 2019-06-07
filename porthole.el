@@ -201,8 +201,11 @@ its own function to enable custom body handling.
 
 If not, a 401 response trigger will be thrown.
 
-`HEADERS' should be an alist of the headers, extracted from the
-`elnode' httpcon object."
+Arguments:
+
+`HEADERS' - an alist of an Elnode `httpcon' object's headers.
+
+`PORTHOLE-SERVER' - the name of the server to check against."
   (let ((target-username (porthole--server-username porthole-server))
         (target-password (porthole--server-password porthole-server)))
     ;; Only perform authentication when a username or password are required.
