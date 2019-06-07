@@ -614,7 +614,6 @@ specifying the username, port or password) please refer to
                                           (username nil)
                                           (password nil)
                                           (publish-port t)
-                                          ;; TODO: Maybe combine into "publish-credentials"?
                                           (publish-username t)
                                           (publish-password t)
                                           (exposed-functions '()))
