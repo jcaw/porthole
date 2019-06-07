@@ -186,7 +186,9 @@ from an HTTP request. This is an extension function to allow
 this.
 
 This is ripped from `elnode--http-post-to-alist', extracted into
-its own function to enable custom body handling."
+its own function to enable custom body handling.
+
+`HTTPCON' is the Elnode connection object."
   (with-current-buffer (process-buffer httpcon)
     (buffer-substring
      ;; we might have to add 2 to this because of trailing \r\n
