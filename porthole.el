@@ -13,14 +13,14 @@
 
 
 (defvar porthole--running-servers '()
-  "Alist of running HTTP-RPC servers.
+  "Alist of running Porthole servers.
 
 Maps server names (strings) to their respective `porthole--server'
 objects.")
 
 
 (cl-defstruct porthole--server
-  "Structure representing an HTTP RPC server.
+  "Structure representing a Porthole server.
 
 This struct is intended to be used as a record of the running RPC
 server."
