@@ -72,12 +72,12 @@ server."
         (porthole--on-mac
          (substitute-in-file-name "$HOME/Library/"))
         (t
-         ;; TODO: Fall back to the home dir on unknown systems.
+         ;; Use the same method as Linux on unknown systems.
          (display-warning
           "porthole"
           (concat "Unrecognised system type. Don't know where to find the "
-                  "temp directory. Clients will not be able to automatically "
-                  "read the RPC server's configuration"))))
+                  "temp directory. Using the same method as Linux."))
+         (porthole--get-linux-temp-dir)))
   "The base temp directory to use.
 
 This will be dependent on the current system.")
