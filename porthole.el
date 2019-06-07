@@ -119,7 +119,9 @@ This is a utility function for `porthole--alist-get'. It compares
 keys. Symbol keys can match string keys, and all keys are
 compared case-insensitively.
 
-See `htpc-alist-get' for usage examples."
+See `htpc-alist-get' for usage examples.
+
+`KEY1' and `KEY2' are the keys to compare."
   ;; Convert symbols to strings before comparison
   (unless (stringp key1)
     (setq key1 (format "%s" key1)))
