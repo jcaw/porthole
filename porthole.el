@@ -335,7 +335,9 @@ This is a wrapper that provides a simpler interface than the
 
 
 (defun porthole--end-success (json-response)
-  "End processing of a handler with a successful JSON response."
+  "End processing of a handler with a successful JSON response.
+
+`JSON-RESPONSE' is the string-encoded JSON content to send."
   (unless (stringp json-response)
     (error "`JSON-RESPONSE' should be string. Was: %s" (type-of json-response)))
   (porthole--end-simple 200 "application/json" json-response))
