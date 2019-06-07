@@ -20,7 +20,7 @@ objects.")
 
 
 (cl-defstruct porthole--server
-  "Structure representing a Porthole server.
+  "Struct representing a Porthole server.
 
 This struct is intended to be used as a record of the running RPC
 server."
