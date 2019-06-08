@@ -268,7 +268,7 @@ import requests
 
 rpc_call = {
     "jsonrpc": "2.0"
-    "method": "insert",
+    "method": "revert-buffer",
     # Note how keyword arguments are supplied. See the `json-rpc-server.el`
     # package for more information.
     "params": [":ignore-auto" ":noconfirm"],
