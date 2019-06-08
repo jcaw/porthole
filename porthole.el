@@ -73,11 +73,6 @@
 (require 'json-rpc-server)
 
 
-;; We have to monkeypatch Elnode before using it on Emacs 26, possibly other
-;; Emacs too.
-(require 'porthole-elnode-monkeypatch)
-
-
 (defgroup porthole nil
   "Group relating to Porthole RPC servers."
   :prefix "porthole-"

@@ -13,7 +13,6 @@
  (depends-on "ecukes")
  (depends-on "ert-runner")
  (depends-on "el-mock")
- (depends-on "el-patch")
  (depends-on "elnode")
  (depends-on "json-rpc-server"
              :git "https://github.com/jcaw/json-rpc-server.el"
