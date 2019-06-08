@@ -5,11 +5,11 @@
 
 
 (push (expand-file-name
-       (f-join porthole--tests-directory ".." ".."))
+       (f-join porthole--tests-directory ".."))
       load-path)
 
 
-(load-file "../../porthole.el")
+(load-file "../porthole.el")
 
 
 (defconst porthole-transport-layer-test-dir
