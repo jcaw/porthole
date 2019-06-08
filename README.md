@@ -176,7 +176,7 @@ HTTP calls.
 
 **In Emacs**
 
-Start the server, like in the last example:
+Start your server, like in the last example:
 
 ```emacs-lisp
 ;; Start an automatic server.
