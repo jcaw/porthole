@@ -501,7 +501,9 @@ still be protected against."
         ;; Make the app and server directories, if they don't exist.
         (make-directory info-folder t))
       (with-temp-file info-filename
-        (insert info-as-json)))))
+        (insert info-as-json))
+      ;; Return the filename for the info file
+      info-filename)))
 
 
 (defun porthole--erase-session-file (server-name)
