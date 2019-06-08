@@ -69,8 +69,8 @@
 
 (require 'cl-lib)
 (require 'elnode)
-(require 'json-rpc-server)
 (require 'f)
+(require 'json-rpc-server)
 
 
 ;; We have to monkeypatch Elnode before using it on Emacs 26, possibly other
