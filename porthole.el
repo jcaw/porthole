@@ -24,12 +24,18 @@ objects.")
 
 This struct is intended to be used as a record of the running RPC
 server."
-  (name :read-only t :type string)
-  (port :read-only t)
+  (name nil
+        :read-only t
+        :type string)
+  (port nil
+        :read-only t)
   (exposed-functions '())
-  (username nil :read-only t)
-  (password nil :read-only t)
-  (elnode-process :read-only t)
+  (username nil
+            :read-only t)
+  (password nil
+            :read-only t)
+  (elnode-process nil
+                  :read-only t)
   )
 
 
