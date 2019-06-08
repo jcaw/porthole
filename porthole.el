@@ -805,7 +805,7 @@ should only be called when, for example, Emacs is closing."
 
 
 (defun porthole-expose-functions (server-name funcs)
-  "Expose a list of functions to RPC calls on a particular Porthole server.
+  "Expose a list of functions to RPC calls on one Porthole server.
 
 Functions have to be exposed before they can be executed
 remotely. This is just like `porthole-expose-functions', but it
