@@ -259,7 +259,7 @@ Start a server on a specific port, with a specific username and password:
 <b>In the Client:</b>
 
 Send a POST request to port 8000 with the JSON-RPC 2.0 request encoded in the
-body and the basic authentication credentials in the header.
+body. Put the Basic Authentication credentials in the header.
 
 In Python:
 
