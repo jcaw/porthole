@@ -6,7 +6,7 @@
 ;; URL: https://github.com/r/jcaw/porthole
 ;; Version: 0.1.0
 ;; Keywords: comm, extensions, processes, tools
-;; Package-Requires: ((emacs "26") (elnode "0.9.9.8"))
+;; Package-Requires: ((emacs "26") (elnode "0.9.9.8") (f "0.19.0") (json-rpc-server "0.1.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
