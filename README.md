@@ -180,17 +180,17 @@ Start your server, like in the last example:
 
 ```emacs-lisp
 ;; Start an automatic server.
-(porthole-start-server "pyrate-server")
+(porthole-start-server "pryvateer-server")
 ;; This time, we'll expose the `insert' function.
-(porthole-expose-function "pirate-server" 'insert)
+(porthole-expose-function "pryvateer-server" 'insert)
 ```
 
 ```python
 import requests
 import json
 
-def pyrate_insert():
-    server_name = "pyrate-server"
+def pryvateer_insert():
+    server_name = "pryvateer-server"
 
     # Preparing a call is easy.
     rpc_call = {
