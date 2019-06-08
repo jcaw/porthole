@@ -78,6 +78,16 @@
 (require 'porthole-elnode-monkeypatch)
 
 
+(defgroup porthole nil
+  "Group relating to Porthole RPC servers."
+  :prefix "porthole-"
+  :link `(url-link :tag "Send Bug Report"
+                   "https://github.com/jcaw/porthole/issues")
+  :link '(url-link :tag "Other Emacs packages by Jcaw"
+                   "https://github.com/jcaw?utf8=%E2%9C%93&tab=repositories&q=&type=source&language=emacs+lisp")
+  :link '(url-link :tag "Homepage"
+                   "https://github.com/jcaw/porthole")
+  :group 'comm)
 
 
 (defvar porthole--running-servers '()
