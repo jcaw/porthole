@@ -778,6 +778,11 @@ This method will fail if no server with that name is running."
          (port (porthole--server-port server)))
     ;; Stop the actual HTTP process
     (elnode-stop port)
+    (message
+     (concat "porthole: Please ignore any messages that say \"found the "
+             "server process - NOT deleting\" - this is just logging from "
+             "Elnode (it can't be suppressed)."))
+    (message "Porthole server \"%s\" stopped." server-name)
     ;; Remove the server from the list of running servers.
     (setq porthole--running-servers
           (porthole--alist-remove server-name porthole--running-servers))))
