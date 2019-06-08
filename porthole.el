@@ -521,8 +521,15 @@ Also deletes the server's session folder."
 (defun porthole--assert-symbol (symbol)
   "Ensure that `SYMBOL' is actually a symbol.
 
+This method does not allow nil or t, even though they are
+technically symbols.
+
 An error will be raised if it's not."
-  (unless (symbolp symbol)
+  (unless (and (symbolp symbol)
+               ;; Protect against nil
+               symbol
+               ;; Protect against t
+               (not (eq t symbol)))
     (error "%s" (format "Not a symbol. Type: %s. Value: %s"
                         (type-of symbol) symbol))))
 
