@@ -123,7 +123,7 @@ Starting a server is easy. All you need is a name:
 (porthole-start-server "pyrate-server")
 ;; Functions have to be exposed before they can be invoked remotely.
 ;; Let's expose the `+' function.
-(porthole-expose-function "pirate-server" '+)
+(porthole-expose-function "pyrate-server" '+)
 ```
 
 <b>In the Client:</b>
