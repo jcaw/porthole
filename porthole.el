@@ -170,7 +170,7 @@ Arguments:
   "Remove all pairs referenced by `KEY' in `ALIST'.
 
 Returns a new alist without those elements."
-  (cl-delete server-name porthole--running-servers :key #'car :test #'equal))
+  (cl-delete key alist :key #'car :test #'porthole--similar-keys))
 
 
 (defun porthole--random-sha256-key ()
