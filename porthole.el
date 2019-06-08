@@ -817,6 +817,8 @@ Arguments:
       ;; Have to manually check that Elnode doesn't have a server on this port,
       ;; because it will fail silently otherwise.
       (error "Elnode already has a server running on this port"))
+    ;; TODO: Find some way to name the server process so it doesn't have a
+    ;;   generic Elnode name and looks like a porthole server?
     (unless (elnode-start
              'porthole--handle-request
              :port port
