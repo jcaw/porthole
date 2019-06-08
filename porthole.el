@@ -767,9 +767,9 @@ Arguments:
 
 
 (defun porthole-stop-server (server-name)
-  "Stop the active JSON-RPC 2.0 server.
+  "Stop a porthole server.
 
-This method will fail if no server is running."
+This method will fail if no server with that name is running."
   ;; Erase the server info file up front - it may exist even though the server
   ;; isn't running.
   (porthole--erase-session-file server-name)
