@@ -78,7 +78,6 @@
 (require 'porthole-elnode-monkeypatch)
 
 
-;;; Code
 
 
 (defvar porthole--running-servers '()
