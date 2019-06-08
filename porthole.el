@@ -1,3 +1,72 @@
+;;; porthole.el --- RPC Servers in Emacs            -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2019  GitHub user "Jcaw"
+
+;; Author:  GitHub user "Jcaw"
+;; URL: https://github.com/r/jcaw/porthole
+;; Version: 0.1.0
+;; Keywords: comm, extensions, processes, tools
+;; Package-Requires: ((emacs "26"))
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; Porthole lets you start RPC servers in Emacs. These servers allow Elisp to be
+;; invoked remotely via HTTP requests.
+
+;; You can expose data that exists within Emacs, or control Emacs from an
+;; external program. You can also execute Elisp functions on data (such as text)
+;; that exists outside Emacs.
+
+;; ---
+
+;; Porthole servers are designed to "just work." All your server needs is a name
+;; and clients will be able to find it automatically. Here's a typical workflow:
+
+;; In Emacs:
+
+;;   1. Pick a name and start your server.
+;;   2. Tell it which functions you want to be available to RPC calls.
+
+;;   Now, continue using Emacs.
+
+;; In the Client:
+
+;;   1. Load the connection information from your server's session file (this
+;;      file has a known path).
+;;   2. POST a JSON-RPC request to the server.
+
+;;   *Emacs executes your RPC call and returns the result.*
+
+;;   3. Parse the JSON-RPC 2.0 object you received.
+
+;; There's even a Python Client to handle the client-side automatically.
+
+;; See README.md for more information and usage examples.
+
+;; ---
+
+;; README.md:     https://github.com/jcaw/porthole
+
+;; Python Client: https://github.com/jcaw/porthole-python-client
+
+
+
+;;; Code:
+
+
 (require 'cl-lib)
 (require 'elnode)
 (require 'json-rpc-server)
