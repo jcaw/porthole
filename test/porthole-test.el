@@ -7,7 +7,7 @@
 (require 'json)
 
 
-(load-file "porthole.el")
+(require 'porthole)
 
 
 (ert-deftest test-porthole--assert-valid-server-name ()
