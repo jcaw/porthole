@@ -179,7 +179,6 @@ HTTP calls.
 Start the server, like in the last example:
 
 ```emacs-lisp
-```emacs-lisp
 ;; Start an automatic server.
 (porthole-start-server "pyrate-server")
 ;; This time, we'll expose the `insert' function.
