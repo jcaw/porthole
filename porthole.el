@@ -664,6 +664,24 @@ Invalid:
 
 
 ;;;###autoload
+(cl-defun porthole-start-server-safe (name &key (exposed-functions '()))
+  "Ensure a Porthole server is running.
+
+
+This is a safe version of `porthole-start-server' that doesn't
+raise an error when the server s already running. If the server
+is already running it won't be restarted - `exposed-functions'
+will just be added to the list of exposed functions.
+
+See `porthole-start-server' for more.
+
+"
+  (unless (porthole--server-running-p name)
+    (porthole-start-server name :exposed-function exposed-functions))
+  (porthole-expose-functions exposed-functions))
+
+
+;;;###autoload
 (cl-defun porthole-start-server (name &key (exposed-functions '()))
   "Start a new Porthole server.
 
