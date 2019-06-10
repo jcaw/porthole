@@ -159,7 +159,7 @@ This will be dependent on the current system.")
 (defconst porthole--session-info-dir
   (when porthole--base-temp-dir
     (f-join porthole--base-temp-dir "emacs-porthole"))
-  "Directory in which to store files relating to the current server session.
+  "Directory in which to store Porthole servers.
 
 This is a known name, so clients can also read it and gather
 relevant information.")
