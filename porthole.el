@@ -95,7 +95,7 @@ objects.")
 (cl-defstruct porthole--server
   "Struct representing a Porthole server.
 
-This struct is intended to be used as a record of the running RPC
+This struct is intended to be used as a record of a running RPC
 server."
   (name nil
         :read-only t
