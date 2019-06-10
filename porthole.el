@@ -934,7 +934,7 @@ reference them by name)."
           (push func exposed-functions))))
 
 
-(defun porthole-hide-function (func server-name)
+(defun porthole-hide-function (server-name func)
   "Hide a function from remote procedure calls on a server.
 
 `FUNC' is the function symbol to hide.
@@ -949,7 +949,7 @@ This reverses `porthole-expose-function'."
   (porthole--assert-server-running server-name)
   (let ((server (porthole-get-server server-name)))
     (setf (porthole--server-exposed-functions server)
-          (porthole--alist-remove func (porthole--server-exposed-functions server)))))
+          (remove func (porthole--server-exposed-functions server)))))
 
 
 ;; Ensure all servers are stopped when Emacs is closed.
