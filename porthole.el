@@ -924,6 +924,12 @@ to reference them by name)."
         functions))
 
 
+(defun porthole-list-exposed-functions (server-name)
+  "List the functions exposed by the server with `SERVER-NAME'"
+  (porthole--server-exposed-functions
+   (porthole-get-server server-name)))
+
+
 (defun porthole-expose-function (server-name func)
   "Expose a function to RPC calls on a particular Porthole server.
 
