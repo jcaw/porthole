@@ -927,10 +927,11 @@ reference them by name)."
     (error "`func' should be a symbol. Was type: %s. Value: %s"
            (type-of func) func))
   (porthole--assert-server-running server-name)
-  (let ((server (porthole-get-server server-name)))
+  (let* ((server (porthole-get-server server-name))
+         (exposed-functions (porthole--server-exposed-functions server)))
+    ;; We don't want duplicates
     (setf (porthole--server-exposed-functions server)
-          (append (porthole--server-exposed-functions server)
-                  (list func)))))
+          (push func exposed-functions))))
 
 
 (defun porthole-hide-function (func server-name)
