@@ -128,19 +128,13 @@ server."
   "Get a user-only temp dir on Linux, to store the server info in."
   ;; If the runtime dir isn't available, fall back to the home dir.
   (or (getenv "XDG_RUNTIME_DIR")
-      (let ((home (getenv "HOME")))
-        (if home
-            (progn
-              (display-warning
-               "porthole"
-               (concat "$XDG_RUNTIME_DIR environment variable not set. Using "
-                       "$HOME/tmp as the base temp directory instead."))
-              (f-join home "/tmp"))
-          (display-warning
-           "porthole"
-           (concat "Neither $XDG_RUNTIME_DIR nor $HOME could be read from "
-                   "the environment. Clients will not be able to automatically "
-                   "connect to the server by reading the temp file."))))))
+      (and (getenv "HOME")
+           (f-join (getenv "HOME") "tmp"))
+      (display-warning
+       "porthole"
+       (concat "Neither $XDG_RUNTIME_DIR nor $HOME could be read from "
+               "the environment. Clients will not be able to automatically "
+               "connect to servers by reading the temp file."))))
 
 
 (defconst porthole--base-temp-dir
