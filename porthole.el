@@ -439,7 +439,7 @@ response containing a JSON object that encapsulated this error."
 
 The authentication process requires the `HEADERS' and the
 `PORTHOLE-SERVER' to be extracted from the Elnode `HTTPCON'
-object. These should also be passed to avoid duplication of
+object. Pass these down to this function to avoid duplication of
 effort."
   (condition-case-unless-debug err
       (let ((content-type (porthole--alist-get "Content-Type" headers)))
