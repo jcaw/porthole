@@ -527,19 +527,19 @@ protected against."
     port))
 
 
-(defun porthole--get-session-folder (server-name)
-  "Get the session info folder for `SERVER-NAME'."
+(defun porthole--get-session-folder (name-of-server)
+  "Get the session info folder for `NAME-OF-SERVER'."
   ;; Session file should be at:
-  ;; <porthole-info-dir>/<server-name>/session.json
-  (f-join porthole--session-info-dir server-name))
+  ;; <porthole-info-dir>/<name-of-server>/session.json
+  (f-join porthole--session-info-dir name-of-server))
 
 
 ;;;###autoload
-(defun porthole-get-session-file-path (server-name)
-  "Get the path of the session file for server with name `SERVER-NAME'."
+(defun porthole-get-session-file-path (name-of-server)
+  "Get the path of the session file for server with name `NAME-OF-SERVER'."
   ;; Session file should be at:
-  ;; <temp-dir>/emacs-porthole/<server-name>/session.json
-  (f-join (porthole--get-session-folder server-name)
+  ;; <temp-dir>/emacs-porthole/<name-of-server>/session.json
+  (f-join (porthole--get-session-folder name-of-server)
           porthole--session-file-name))
 
 
@@ -558,7 +558,7 @@ protected against."
   ;;   are t? It shows other programs that the server is at least running.
   ;;
   ;; Session file should be at:
-  ;; <temp-dir>/emacs-porthole/<server-name>/session.json
+  ;; <temp-dir>/emacs-porthole/<name-of-server>/session.json
   (let ((info '()))
     (when publish-port
       (push `(port . ,port)
@@ -581,12 +581,12 @@ protected against."
       info-filename)))
 
 
-(defun porthole--erase-session-file (server-name)
+(defun porthole--erase-session-file (name-of-server)
   "Delete the server's session file.
 
 Also deletes the server's session folder."
-  (let ((info-folder (porthole--get-session-folder server-name))
-        (info-filename (porthole-get-session-file-path server-name)))
+  (let ((info-folder (porthole--get-session-folder name-of-server))
+        (info-filename (porthole-get-session-file-path name-of-server)))
     (when (f-file-p info-filename)
       (f-delete info-filename))
     (when (f-dir-p info-folder)
@@ -615,41 +615,41 @@ An error will be raised if `SYMBOL' is not a symbol."
 
 
 ;;;###autoload
-(defun porthole-get-server (server-name)
-  "Get the `porthole--server' with name `SERVER-NAME'.
+(defun porthole-get-server (name-of-server)
+  "Get the `porthole--server' with name `NAME-OF-SERVER'.
 
 Returns nil if no server with this name is running."
-  (porthole--alist-get server-name porthole--running-servers))
+  (porthole--alist-get name-of-server porthole--running-servers))
 
 
-(defun porthole-server-running-p (server-name)
-  "Returns t if a server with `SERVER-NAME' is already running.
+(defun porthole-server-running-p (name-of-server)
+  "Returns t if a server with `NAME-OF-SERVER' is already running.
 
 Note that server names are case-insensitive."
-  (if (porthole-get-server server-name) t nil))
+  (if (porthole-get-server name-of-server) t nil))
 
 
-(defun porthole--assert-server-running (server-name &optional message)
+(defun porthole--assert-server-running (name-of-server &optional message)
   "Ensure a server is running. If not, raise an error.
 
-`SERVER-NAME' is the name of the server to check"
-  (unless (porthole-server-running-p server-name)
+`NAME-OF-SERVER' is the name of the server to check"
+  (unless (porthole-server-running-p name-of-server)
     (error "%s" (or message
-                    (format "No server named \"%s\" is running" server-name)))))
+                    (format "No server named \"%s\" is running" name-of-server)))))
 
 
-(defun porthole--assert-server-not-running (server-name &optional message)
-  "If a server with `SERVER-NAME' is running, raise an error.
+(defun porthole--assert-server-not-running (name-of-server &optional message)
+  "If a server with `NAME-OF-SERVER' is running, raise an error.
 
-`SERVER-NAME' is the name of the server to check."
-  (when (porthole-server-running-p server-name)
+`NAME-OF-SERVER' is the name of the server to check."
+  (when (porthole-server-running-p name-of-server)
     (error "%s" (or message
                     (format "A server with the name \"%s\" is already running"
-                            server-name)))))
+                            name-of-server)))))
 
 
-(defun porthole--assert-valid-server-name (server-name)
-  "Ensure `SERVER-NAME' is a valid server name. Raise an error if not.
+(defun porthole--assert-valid-server-name (name-of-server)
+  "Ensure `NAME-OF-SERVER' is a valid server name. Raise an error if not.
 
 Server names may only contain alphanumeric characters, and
 dashes.
@@ -661,7 +661,7 @@ Valid:
 Invalid:
 
   \"a_server_with? punctuation\""
-  (unless (string-match "^[a-zA-Z0-9-]+$" server-name)
+  (unless (string-match "^[a-zA-Z0-9-]+$" name-of-server)
     (error "Server names may only contain alphanumeric characters and dashes")))
 
 
@@ -728,7 +728,7 @@ Arguments:
 
 
 ;;;###autoload
-(cl-defun porthole-start-server-advanced (server-name
+(cl-defun porthole-start-server-advanced (name-of-server
                                           &key
                                           (port 0)
                                           (username nil)
@@ -763,7 +763,7 @@ configurable - see the arguments for more.
 
 Arguments:
 
-`SERVER-NAME' - This is the name Porthole uses to identify your
+`NAME-OF-SERVER' - This is the name Porthole uses to identify your
   server. It should be simple, memorable and unique. Server
   creation will fail if a server with the same name is already
   running. This argument is mandatory.
@@ -791,14 +791,14 @@ Arguments:
 `:EXPOSED-FUNCTIONS' - A list of functions to expose immediately
   upon server creation. See `porthole-expose-function' for more.
   Default: nil"
-  (porthole--assert-valid-server-name server-name)
-  (porthole--assert-server-not-running server-name)
+  (porthole--assert-valid-server-name name-of-server)
+  (porthole--assert-server-not-running name-of-server)
   ;; Every function name should be a symbol.
   (mapc 'porthole--assert-symbol exposed-functions)
   (let ((assigned-port))
     ;; We have to handle dynamic ports differently.
     (if (member port '("0" 0 t))
-        (setq assigned-port (porthole--start-on-dynamic-port server-name))
+        (setq assigned-port (porthole--start-on-dynamic-port))
       ;; TODO: Maybe explicitly check to see if this port is free across the
       ;; board?
       (when (alist-get port elnode-server-socket)
@@ -816,8 +816,8 @@ Arguments:
     ;; If we've reached this point, the Elnode server has started successfully.
     ;; Now create a `porthole--server' object to wrap up all the server
     ;; information and push it onto the list.
-    (push (cons server-name (make-porthole--server
-                             :name server-name
+    (push (cons name-of-server (make-porthole--server
+                             :name name-of-server
                              :port assigned-port
                              :username username
                              :password password
@@ -827,16 +827,16 @@ Arguments:
                              :elnode-process (alist-get port elnode-server-socket)))
           porthole--running-servers)
     (message "porthole: RPC server \"%s\" running on port %s"
-             server-name assigned-port)
+             name-of-server assigned-port)
     (porthole--publish-session-file
-     server-name assigned-port username password
+     name-of-server assigned-port username password
      :publish-port publish-port
      :publish-username publish-username
      :publish-password publish-password)
-    server-name))
+    name-of-server))
 
 
-(defun porthole--start-on-dynamic-port (server-name)
+(defun porthole--start-on-dynamic-port ()
   "Start an underlying Elnode server on a dynamic port.
 
 This requires a different approach to starting on a specific
@@ -844,9 +844,7 @@ port. See the comments in this method for details. Please note,
 this is an internal method intended for
 `porthole-start-server-advanced'.
 
-Returns the port that was assigned to the server.
-
-`SERVER-NAME' is the name of the server to start."
+Returns the port that was assigned to the server."
   ;; Please note, this CAN PRODUCE A RACE CONDITION if the port is grabbed
   ;; between this check and starting the server.
   ;;
@@ -890,10 +888,10 @@ Returns the port that was assigned to the server.
     assigned-port))
 
 
-(defun porthole-stop-server (server-name)
+(defun porthole-stop-server (name-of-server)
   "Stop a porthole server.
 
-`SERVER-NAME' is the name of the server to stop.
+`NAME-OF-SERVER' is the name of the server to stop.
 
 This method will fail if no server with that name is running.
 
@@ -901,9 +899,9 @@ This is only meant to be used on your server. Please don't try to
 stop servers started by other packages."
   ;; Erase the server info file up front - it may exist even though the server
   ;; isn't running.
-  (porthole--erase-session-file server-name)
-  (porthole--assert-server-running server-name)
-  (let* ((server (porthole-get-server server-name))
+  (porthole--erase-session-file name-of-server)
+  (porthole--assert-server-running name-of-server)
+  (let* ((server (porthole-get-server name-of-server))
          (port (porthole--server-port server)))
     ;; Stop the actual HTTP process
     (elnode-stop port)
@@ -913,15 +911,15 @@ stop servers started by other packages."
      (concat "porthole: Please ignore any messages that say \"found the "
              "server process - NOT deleting\" - this is just logging from "
              "Elnode (it can't be suppressed)."))
-    (message "Porthole server \"%s\" stopped." server-name)
+    (message "Porthole server \"%s\" stopped." name-of-server)
     ;; Remove the server from the list of running servers.
     (setq porthole--running-servers
-          (porthole--alist-remove server-name porthole--running-servers))))
+          (porthole--alist-remove name-of-server porthole--running-servers))))
 
 
-(defun porthole--stop-server-safe (server-name &rest _)
+(defun porthole--stop-server-safe (name-of-server &rest _)
   "Like `porthole-stop-server', but this function will not raise errors."
-  (ignore-errors (porthole-stop-server server-name)))
+  (ignore-errors (porthole-stop-server name-of-server)))
 
 
 (defun porthole--stop-all-servers (&rest _)
@@ -935,7 +933,7 @@ should only be called when, for example, Emacs is closing."
         (porthole--running-server-names)))
 
 
-(defun porthole-expose-functions (server-name funcs)
+(defun porthole-expose-functions (name-of-server funcs)
   "Expose a list of functions to RPC calls on one Porthole server.
 
 Functions have to be exposed before they can be executed
@@ -947,7 +945,7 @@ Example call:
   (porthole-expose-function \"pirate-server\"
                             '(insert delete-char point))
 
-`SERVER-NAME' is the name of the server on which the function
+`NAME-OF-SERVER' is the name of the server on which the function
 should be exposed.
 
 `FUNCS' is a list of function symbols to expose. For example:
@@ -958,17 +956,17 @@ Supply a symbol, not a string. Lambda functions are not
 allowed (there would be no way for the client to reference them
 by name)."
   (mapc (lambda (func)
-          (porthole-expose-function server-name func))
+          (porthole-expose-function name-of-server func))
         funcs))
 
 
-(defun porthole-list-exposed-functions (server-name)
-  "List the functions exposed by the server with `SERVER-NAME'"
+(defun porthole-list-exposed-functions (name-of-server)
+  "List the functions exposed by the server with `NAME-OF-SERVER'"
   (porthole--server-exposed-functions
-   (porthole-get-server server-name)))
+   (porthole-get-server name-of-server)))
 
 
-(defun porthole-expose-function (server-name func)
+(defun porthole-expose-function (name-of-server func)
   "Expose a function to RPC calls on a particular Porthole server.
 
 Functions have to be exposed before they can be executed
@@ -978,7 +976,7 @@ Example call:
 
   (porthole-expose-function \"pirate-server\" 'insert)
 
-`SERVER-NAME' is the name of the server on which the function
+`NAME-OF-SERVER' is the name of the server on which the function
 should be exposed.
 
 `FUNC' is the function symbol to expose. For example, `insert' or
@@ -988,28 +986,28 @@ reference them by name)."
   (unless (symbolp func)
     (error "`func' should be a symbol. Was type: %s. Value: %s"
            (type-of func) func))
-  (porthole--assert-server-running server-name)
-  (let* ((server (porthole-get-server server-name))
+  (porthole--assert-server-running name-of-server)
+  (let* ((server (porthole-get-server name-of-server))
          (exposed-functions (porthole--server-exposed-functions server)))
     ;; We don't want duplicates
     (setf (porthole--server-exposed-functions server)
           (push func exposed-functions))))
 
 
-(defun porthole-hide-function (server-name func)
+(defun porthole-hide-function (name-of-server func)
   "Hide a function from remote procedure calls on a server.
 
 `FUNC' is the function symbol to hide.
 
-`SERVER-NAME' is the name of the server on which the function
+`NAME-OF-SERVER' is the name of the server on which the function
 should be hidden.
 
 This reverses `porthole-expose-function'."
   (unless (symbolp func)
     (error "`func' should be a symbol. Was type: %s. Value: %s"
            (type-of func) func))
-  (porthole--assert-server-running server-name)
-  (let ((server (porthole-get-server server-name)))
+  (porthole--assert-server-running name-of-server)
+  (let ((server (porthole-get-server name-of-server)))
     (setf (porthole--server-exposed-functions server)
           (remove func (porthole--server-exposed-functions server)))))
 
