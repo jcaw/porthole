@@ -303,7 +303,7 @@ Arguments:
             ;; authentication is required.
             (porthole--end-unauthenticated "authentication required"))
           (let ((decoded-credentials (base64-decode-string credentials)))
-            ;; Cover the case where we match at position 0.
+            ;; `integerp' because we might match at position 0.
             (if (integerp (string-match ":" decoded-credentials))
                 (let ((provided-username (substring decoded-credentials 0
                                                     (match-beginning 0)))
