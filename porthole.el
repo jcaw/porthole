@@ -781,43 +781,7 @@ Arguments:
   (mapc 'porthole--assert-symbol exposed-functions)
   ;; We have to handle dynamic ports differently.
   (if (member port '("0" 0 t))
-      ;; Get a dynamic port. Please note, this CAN PRODUCE A RACE CONDITION if the
-      ;; port is grabbed between this check and starting the server.
-      ;;
-      ;; This is necessary because Elnode stores a server started on port 0, in...
-      ;; The port 0 slot. So you can only start one server on port 0.
-      ;;
-      ;; Because this can produce a race condition, we try multiple times just in
-      ;; case that race condition pops up.
-      (let (
-            ;; Try to claim a dynamic port this many times. The chance of the race
-            ;; condition occurring 500 times is infinitesimally small.
-            (max-attempts 500))
-        (unless (catch 'server-started
-                  (dotimes (i max-attempts)
-                    (setq port (porthole--find-free-port "localhost"))
-                    (condition-case err
-                        ;; Try and start the server with these parameters.
-                        ;;
-                        ;; If the port is taken, it will throw a file-error. If
-                        ;; Elnode already has a server running on this port (it
-                        ;; shouldn't, but just in case), the server creation
-                        ;; process will fail silently, and return nil. Handle
-                        ;; both cases.
-                        (when (elnode-start
-                               'porthole--handle-request
-                               :port port
-                               :host "localhost")
-                          ;; If the server was started successfully, we're done. We
-                          ;; have a server - break out and continue.
-                          (throw 'server-started t))
-                      (file-error nil))
-                    (throw 'server-started nil)))
-          ;; If the server could not be started after many retries, we just raise an error.
-          (error "%s" (format (concat
-                               "Tried to start on a free port %s times."
-                               " Failed each time. Server could not be started")
-                              max-attempts))))
+      (porthole--start-on-dynamic-port server-name)
     ;; TODO: Maybe explicitly check to see if this port is free across the
     ;; board?
     (when (alist-get port elnode-server-socket)
@@ -853,10 +817,65 @@ Arguments:
   server-name)
 
 
+(defun porthole--start-on-dynamic-port (server-name)
+  "Start an underlying Elnode server on a dynamic port.
+
+This requires a different approach to starting on a specific
+port. See the comments in this method for details. Please note,
+this is an internal method intended for
+`porthole-start-server-advanced'.
+
+`SERVER-NAME' is the name of the server to start."
+  ;; Please note, this CAN PRODUCE A RACE CONDITION if the port is grabbed
+  ;; between this check and starting the server.
+  ;;
+  ;; This is necessary because Elnode stores a server started on port 0,
+  ;; in... The port 0 slot. So you can only start one server on port 0.
+  ;; Rather than modifying the underlying Elnode dictionary (Elnode might
+  ;; change its structure), we pre-allocate a specific port.
+  ;;
+  ;; Because this can produce a race condition, we try multiple times.
+  (let (
+        ;; Try to claim a dynamic port this many times. The chance of the race
+        ;; condition occurring 500 times is infinitesimally small.
+        (max-attempts 500))
+    (unless (catch 'server-started
+              (dotimes (i max-attempts)
+                (setq port (porthole--find-free-port "localhost"))
+                (condition-case err
+                    ;; Try and start the server with these parameters.
+                    ;;
+                    ;; If the port is taken, it will throw a file-error. If
+                    ;; Elnode already has a server running on this port (it
+                    ;; shouldn't, but just in case), the server creation
+                    ;; process will fail silently, and return nil. Handle
+                    ;; both cases.
+                    (when (elnode-start
+                           'porthole--handle-request
+                           :port port
+                           :host "localhost")
+                      ;; If the server was started successfully, we're done. We
+                      ;; have a server - break out and continue.
+                      (throw 'server-started t))
+                  (file-error nil))
+                ;; The server wasn't started succesfully - try again
+                (throw 'server-started nil)))
+      ;; If the server could not be started after many retries, we just raise an error.
+      (error "%s" (format (concat
+                           "Tried to start on a free port %s times."
+                           " Failed each time. Server could not be started")
+                          max-attempts)))))
+
+
 (defun porthole-stop-server (server-name)
   "Stop a porthole server.
 
-This method will fail if no server with that name is running."
+`SERVER-NAME' is the name of the server to stop.
+
+This method will fail if no server with that name is running.
+
+This is only meant to be used on your server. Please don't try to
+stop servers started by other packages."
   ;; Erase the server info file up front - it may exist even though the server
   ;; isn't running.
   (porthole--erase-session-file server-name)
