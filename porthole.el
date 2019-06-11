@@ -958,8 +958,8 @@ Supply a symbol, not a string. Lambda functions are not
 allowed (there would be no way for the client to reference them
 by name)."
   (mapc (lambda (func)
-          porthole-expose-function server-name func)
-        functions))
+          (porthole-expose-function server-name func))
+        funcs))
 
 
 (defun porthole-list-exposed-functions (server-name)
