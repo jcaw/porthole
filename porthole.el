@@ -987,7 +987,7 @@ by name)."
 
 
 (defun porthole-list-exposed-functions (name-of-server)
-  "List the functions exposed by the server with `NAME-OF-SERVER'"
+  "List the functions exposed by the server with `NAME-OF-SERVER'."
   (porthole--server-exposed-functions
    (porthole-get-server name-of-server)))
 
