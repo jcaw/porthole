@@ -614,7 +614,7 @@ Returns nil if no server with this name is running."
   (porthole--alist-get server-name porthole--running-servers))
 
 
-(defun porthole--server-running-p (server-name)
+(defun porthole-server-running-p (server-name)
   "Returns t if a server with `SERVER-NAME' is already running.
 
 Note that server names are case-insensitive."
@@ -625,7 +625,7 @@ Note that server names are case-insensitive."
   "Ensure a server is running. If not, throw an error.
 
 `SERVER-NAME' is the name of the server to check"
-  (unless (porthole--server-running-p server-name)
+  (unless (porthole-server-running-p server-name)
     (error "%s" (or message
                     (format "No server named \"%s\" is running" server-name)))))
 
@@ -634,7 +634,7 @@ Note that server names are case-insensitive."
   "If a server with `SERVER-NAME' is running, throw an error.
 
 `SERVER-NAME' is the name of the server to check."
-  (when (porthole--server-running-p server-name)
+  (when (porthole-server-running-p server-name)
     (error "%s" (or message
                     (format "A server with the name \"%s\" is already running"
                             server-name)))))
@@ -670,7 +670,7 @@ will just be added to the list of exposed functions.
 See `porthole-start-server' for more.
 
 "
-  (unless (porthole--server-running-p name)
+  (unless (porthole-server-running-p name)
     (porthole-start-server name :exposed-function exposed-functions))
   (porthole-expose-functions exposed-functions))
 
