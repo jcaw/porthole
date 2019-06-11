@@ -417,7 +417,7 @@ underlying `porthole-end'."
 
 
 (defun porthole--end-error-with-info (err)
-  "End the handler and feed the error information back to the client.
+  "End the handler with a 500 and feed error information back to the client.
 
 `ERR' is the error that was raised. The response will be a 500
 response containing a JSON object that encapsulated this error."
@@ -428,9 +428,7 @@ response containing a JSON object that encapsulated this error."
 
 
 (defun porthole--end-error-no-info ()
-  "End the handler. Do not share error information with the client.
-
-The client will receive a 500 response."
+  "End the handler with a 500. Do not share error information with the client."
   (porthole--end-simple 500 "application/json"
                         (json-encode
                          `((details . :json-null)))))
