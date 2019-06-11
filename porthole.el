@@ -474,6 +474,13 @@ executed. It then responds to the client with the result."
   (porthole--respond
    httpcon
    (catch 'porthole-finish-handling
+     ;; Don't catch errors when debugging, so we can trigger the debugger.
+     ;;
+     ;; Note that this will cause the connection with the client to terminate
+     ;; unexpectedly.
+     ;;
+     ;; TODO: Take a second look. Should debugging follow the method in
+     ;;   `json-rpc-server'?
      (condition-case-unless-debug err
          (let ((headers (elnode-http-headers httpcon))
                (porthole-server (porthole--server-from-httpcon httpcon)))
