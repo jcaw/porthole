@@ -338,7 +338,7 @@ port."
 (defun porthole--server-from-httpcon (httpcon)
   "Get the `porthole--server' that this `HTTPCON' is connecting to.
 
-Returns an `porthole--server' object.
+Returns a `porthole--server' object.
 
 Throws an error if no object could be found."
   ;; We get the underlying Elnode server that's serving the connection, then we
