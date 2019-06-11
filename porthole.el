@@ -554,6 +554,9 @@ protected against."
   "Write the current session's info to the known session file."
   ;; TODO: Flesh out docstring.
   ;;
+  ;; TODO: Maybe don't publish the file at all if none of the publishish flags
+  ;;   are t? It shows other programs that the server is at least running.
+  ;;
   ;; Session file should be at:
   ;; <temp-dir>/emacs-porthole/<server-name>/session.json
   (let ((info '()))
