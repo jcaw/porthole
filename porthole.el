@@ -795,42 +795,45 @@ Arguments:
   (porthole--assert-server-not-running server-name)
   ;; Every function name should be a symbol.
   (mapc 'porthole--assert-symbol exposed-functions)
-  ;; We have to handle dynamic ports differently.
-  (if (member port '("0" 0 t))
-      (porthole--start-on-dynamic-port server-name)
-    ;; TODO: Maybe explicitly check to see if this port is free across the
-    ;; board?
-    (when (alist-get port elnode-server-socket)
-      ;; Have to manually check that Elnode doesn't have a server on this port,
-      ;; because it will fail silently otherwise.
-      (error "Elnode already has a server running on this port"))
-    ;; TODO: Find some way to name the server process so it doesn't have a
-    ;;   generic Elnode name and looks like a porthole server?
-    (unless (elnode-start
-             'porthole--handle-request
-             :port port
-             :host "localhost")
-      (error "The Elnode server was not started. Reason unknown")))
-  ;; If we've reached this point, the Elnode server has started successfully.
-  ;; Now create a `porthole--server' object to wrap up all the server
-  ;; information and push it onto the list.
-  (push (cons server-name (make-porthole--server
-                           :name server-name
-                           :port port
-                           :username username
-                           :password password
-                           :exposed-functions exposed-functions
-                           ;; We store the actual Elnode server process too, in case we
-                           ;; wish to query it directly.
-                           :elnode-process (alist-get port elnode-server-socket)))
-        porthole--running-servers)
-  (message "porthole: RPC server \"%s\" running on port %s" server-name port)
-  (porthole--publish-session-file
-   server-name port username password
-   :publish-port publish-port
-   :publish-username publish-username
-   :publish-password publish-password)
-  server-name)
+  (let ((assigned-port))
+    ;; We have to handle dynamic ports differently.
+    (if (member port '("0" 0 t))
+        (setq assigned-port (porthole--start-on-dynamic-port server-name))
+      ;; TODO: Maybe explicitly check to see if this port is free across the
+      ;; board?
+      (when (alist-get port elnode-server-socket)
+        ;; Have to manually check that Elnode doesn't have a server on this port,
+        ;; because it will fail silently otherwise.
+        (error "Elnode already has a server running on this port"))
+      ;; TODO: Find some way to name the server process so it doesn't have a
+      ;;   generic Elnode name and looks like a porthole server?
+      (unless (elnode-start
+               'porthole--handle-request
+               :port port
+               :host "localhost")
+        (error "The Elnode server was not started. Reason unknown"))
+      (setq assigned-port port))
+    ;; If we've reached this point, the Elnode server has started successfully.
+    ;; Now create a `porthole--server' object to wrap up all the server
+    ;; information and push it onto the list.
+    (push (cons server-name (make-porthole--server
+                             :name server-name
+                             :port assigned-port
+                             :username username
+                             :password password
+                             :exposed-functions exposed-functions
+                             ;; We store the actual Elnode server process too, in case we
+                             ;; wish to query it directly.
+                             :elnode-process (alist-get port elnode-server-socket)))
+          porthole--running-servers)
+    (message "porthole: RPC server \"%s\" running on port %s"
+             server-name assigned-port)
+    (porthole--publish-session-file
+     server-name assigned-port username password
+     :publish-port publish-port
+     :publish-username publish-username
+     :publish-password publish-password)
+    server-name))
 
 
 (defun porthole--start-on-dynamic-port (server-name)
@@ -840,6 +843,8 @@ This requires a different approach to starting on a specific
 port. See the comments in this method for details. Please note,
 this is an internal method intended for
 `porthole-start-server-advanced'.
+
+Returns the port that was assigned to the server.
 
 `SERVER-NAME' is the name of the server to start."
   ;; Please note, this CAN PRODUCE A RACE CONDITION if the port is grabbed
@@ -851,13 +856,13 @@ this is an internal method intended for
   ;; change its structure), we pre-allocate a specific port.
   ;;
   ;; Because this can produce a race condition, we try multiple times.
-  (let (
+  (let (assigned-port
         ;; Try to claim a dynamic port this many times. The chance of the race
         ;; condition occurring 500 times is infinitesimally small.
         (max-attempts 500))
     (unless (catch 'server-started
               (dotimes (i max-attempts)
-                (setq port (porthole--find-free-port "localhost"))
+                (setq assigned-port (porthole--find-free-port "localhost"))
                 (condition-case err
                     ;; Try and start the server with these parameters.
                     ;;
@@ -868,7 +873,7 @@ this is an internal method intended for
                     ;; both cases.
                     (when (elnode-start
                            'porthole--handle-request
-                           :port port
+                           :port assigned-port
                            :host "localhost")
                       ;; If the server was started successfully, we're done. We
                       ;; have a server - break out and continue.
@@ -880,7 +885,9 @@ this is an internal method intended for
       (error "%s" (format (concat
                            "Tried to start on a free port %s times."
                            " Failed each time. Server could not be started")
-                          max-attempts)))))
+                          max-attempts)))
+    ;; Return the assigned port
+    assigned-port))
 
 
 (defun porthole-stop-server (server-name)
