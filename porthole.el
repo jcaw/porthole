@@ -600,7 +600,7 @@ protected against."
 
 
 (defun porthole--erase-session-file (name-of-server)
-  "Delete the server's session file.
+  "Delete a server's session file. `NAME-OF-SERVER' indicates the server.
 
 Also deletes the server's session folder."
   (let ((info-folder (porthole--get-session-folder name-of-server))
