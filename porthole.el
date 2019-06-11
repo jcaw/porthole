@@ -526,6 +526,9 @@ The details of the response should be specified in
 (defun porthole--find-free-port (host)
   "Get a dynamically allocated port. This port should be free.
 
+`HOST' is the hostname to use. It should probably be
+\"localhost\".
+
 Note that using this method, there's a small chance of a race
 condition. The port could theoretically be claimed between this
 method returning and another method trying to use the port. The
