@@ -469,8 +469,8 @@ effort."
   "Handle a JSON-RPC request.
 
 This method extracts the underlying JSON-RPC request and passes
-it to the RPC layer to be executed. It then responds to the
-client with the result."
+it to the underlying RPC layer, `json-rpc-server', to be
+executed. It then responds to the client with the result."
   (porthole--respond
    httpcon
    (catch 'porthole-finish-handling
