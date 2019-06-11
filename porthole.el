@@ -551,7 +551,7 @@ protected against."
                                           (publish-port t)
                                           (publish-username t)
                                           (publish-password t))
-  "Publish the current session's session info."
+  "Write the current session's info to the known session file."
   ;; TODO: Flesh out docstring.
   ;;
   ;; Session file should be at:
