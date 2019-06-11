@@ -481,7 +481,7 @@ executed. It then responds to the client with the result."
      ;;
      ;; TODO: Take a second look. Should debugging follow the method in
      ;;   `json-rpc-server'?
-     (condition-case-unless-debug err
+     (condition-case-unless-debug nil
          (let ((headers (elnode-http-headers httpcon))
                (porthole-server (porthole--server-from-httpcon httpcon)))
            ;; Authenticate first
