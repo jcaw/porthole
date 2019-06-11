@@ -388,7 +388,15 @@ Arguments:
   "Respond to a porthole request and stop the handler.
 
 This is a wrapper that provides a simpler interface than the
-underlying `porthole-end'."
+underlying `porthole-end'.
+
+Arguments:
+
+`RESPONSE-CODE' - the HTTP response code to send.
+
+`CONTENT-TYPE' - the Content-Type of the response.
+
+`CONTENT' - the content of the HTTP response."
   (porthole--end response-code
                  `(("Content-Type" . ,content-type))
                  content))
