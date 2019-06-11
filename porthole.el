@@ -410,7 +410,9 @@ Arguments:
 
 
 (defun porthole--end-unauthenticated (message)
-  "End processing of a handler and respond with a 401 response."
+  "End processing of a handler and respond with a 401 response.
+
+`MESSAGE' is the message to send in the content."
   (porthole--end 401
                  '(("WWW-Authenticate" . "Basic realm=\"emacs-rpc-server\"")
                    ("Content-Type" . "text/html"))
