@@ -863,7 +863,7 @@ Returns the port that was assigned to the server.
     (unless (catch 'server-started
               (dotimes (i max-attempts)
                 (setq assigned-port (porthole--find-free-port "localhost"))
-                (condition-case err
+                (condition-case nil
                     ;; Try and start the server with these parameters.
                     ;;
                     ;; If the port is taken, it will throw a file-error. If
