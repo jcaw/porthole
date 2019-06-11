@@ -646,7 +646,7 @@ Note that server names are case-insensitive."
 
 
 (defun porthole--assert-valid-server-name (server-name)
-  "Ensure `SERVER-NAME' is a valid server name.
+  "Ensure `SERVER-NAME' is a valid server name. Raise an error if not.
 
 Server names may only contain alphanumeric characters, and
 dashes.
