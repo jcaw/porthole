@@ -865,6 +865,8 @@ This method will fail if no server with that name is running."
          (port (porthole--server-port server)))
     ;; Stop the actual HTTP process
     (elnode-stop port)
+    ;; Elnode will message stuff here that might be misleading - explain it
+    ;; explicitly.
     (message
      (concat "porthole: Please ignore any messages that say \"found the "
              "server process - NOT deleting\" - this is just logging from "
