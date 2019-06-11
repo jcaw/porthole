@@ -627,7 +627,7 @@ Note that server names are case-insensitive."
 
 
 (defun porthole--assert-server-running (server-name &optional message)
-  "Ensure a server is running. If not, throw an error.
+  "Ensure a server is running. If not, raise an error.
 
 `SERVER-NAME' is the name of the server to check"
   (unless (porthole-server-running-p server-name)
@@ -636,7 +636,7 @@ Note that server names are case-insensitive."
 
 
 (defun porthole--assert-server-not-running (server-name &optional message)
-  "If a server with `SERVER-NAME' is running, throw an error.
+  "If a server with `SERVER-NAME' is running, raise an error.
 
 `SERVER-NAME' is the name of the server to check."
   (when (porthole-server-running-p server-name)
