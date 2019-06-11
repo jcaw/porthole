@@ -511,11 +511,11 @@ The details of the response should be specified in
 (defun porthole--find-free-port (host)
   "Get a dynamically allocated port. This port should be free.
 
-Note that using this method will probably produce a small chance
-of a race condition. The port could theoretically be claimed
-between this method returning and another method trying to use
-the port. The chance of this happening is small, but it should
-still be protected against."
+Note that using this method, there's a small chance of a race
+condition. The port could theoretically be claimed between this
+method returning and another method trying to use the port. The
+chance of this happening is tiny, but it should still be
+protected against."
   (let* ((free-port-process (make-network-process
                              :name "*porthole-free-port-finding-service*"
                              :host host
