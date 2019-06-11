@@ -664,17 +664,23 @@ Invalid:
 
 ;;;###autoload
 (cl-defun porthole-start-server-safe (name &key (exposed-functions '()))
-  "Ensure a Porthole server is running.
-
+  "If the Porthole server with `NAME' is not running, start it.
 
 This is a safe version of `porthole-start-server' that doesn't
-raise an error when the server s already running. If the server
-is already running it won't be restarted - `exposed-functions'
-will just be added to the list of exposed functions.
+raise an error when the server is already running. Use this to
+start extensible servers. For example, you may have a client that
+contacts a single server, but that server could be modular. Each
+module can use this method to ensure the server is running after
+it's loaded.
 
-See `porthole-start-server' for more.
+If the server *is* running, `EXPOSED-FUNCTONS' will be exposed in
+addition to the currently exposed functions. If not, it will be
+used to initialise a new server.
 
-"
+This function should only be used for automatic servers. Don't
+use it for manually configured servers.
+
+See `porthole-start-server' for more about starting servers."
   (unless (porthole-server-running-p name)
     (porthole-start-server name :exposed-function exposed-functions))
   (porthole-expose-functions exposed-functions))
