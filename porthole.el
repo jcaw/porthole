@@ -352,7 +352,7 @@ Throws an error if no object could be found."
   (or (porthole--server-from-port
        (let ((underlying-elnode-server (process-get httpcon :server)))
          (process-contact underlying-elnode-server :service)))
-      ;; Block if no server found.
+      ;; Block if no server found. Should never get here but just in case.
       (error "%s" "No `porthole--server' could be found for `HTTPCON'")))
 
 
