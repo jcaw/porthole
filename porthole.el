@@ -538,7 +538,7 @@ protected against."
 (defun porthole-get-session-file-path (server-name)
   "Get the path of the session file for server with name `SERVER-NAME'."
   ;; Session file should be at:
-  ;; <porthole-info-dir>/<server-name>/session.json
+  ;; <temp-dir>/emacs-porthole/<server-name>/session.json
   (f-join (porthole--get-session-folder server-name)
           porthole--session-file-name))
 
@@ -555,7 +555,7 @@ protected against."
   ;; TODO: Flesh out docstring.
   ;;
   ;; Session file should be at:
-  ;; <porthole-info-dir>/<server-name>/session.json
+  ;; <temp-dir>/emacs-porthole/<server-name>/session.json
   (let ((info '()))
     (when publish-port
       (push `(port . ,port)
