@@ -596,7 +596,7 @@ Also deletes the server's session folder."
 This method does not allow nil or t, even though they are
 technically symbols.
 
-An error will be raised if it's not."
+An error will be raised if `SYMBOL' is not a symbol."
   (unless (and (symbolp symbol)
                ;; Protect against nil
                symbol
