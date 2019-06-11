@@ -641,7 +641,7 @@ Returns nil if no server with this name is running."
 
 
 (defun porthole-server-running-p (name-of-server)
-  "Returns t if a server with `NAME-OF-SERVER' is already running.
+  "Return t if a server with `NAME-OF-SERVER' is already running.
 
 Note that server names are case-insensitive."
   (if (porthole-get-server name-of-server) t nil))
