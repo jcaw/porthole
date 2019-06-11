@@ -662,7 +662,10 @@ isn't running. If not provided, a default message will be used."
 (defun porthole--assert-server-not-running (name-of-server &optional message)
   "If a server with `NAME-OF-SERVER' is running, raise an error.
 
-`NAME-OF-SERVER' is the name of the server to check."
+`NAME-OF-SERVER' is the name of the server to check.
+
+`MESSAGE' is the message to attach to the error if the server is
+running. If not provided, a default message will be used."
   (when (porthole-server-running-p name-of-server)
     (error "%s" (or message
                     (format "A server with the name \"%s\" is already running"
