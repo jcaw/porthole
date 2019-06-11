@@ -388,7 +388,7 @@ Arguments:
   "Respond to a porthole request and stop the handler.
 
 This is a wrapper that provides a simpler interface than the
-  underlying `porthole-end'."
+underlying `porthole-end'."
   (porthole--end response-code
                  `(("Content-Type" . ,content-type))
                  content))
