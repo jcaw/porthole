@@ -480,6 +480,9 @@ effort."
 (defun porthole--handle-request (httpcon)
   "Handle a JSON-RPC request.
 
+`HTTPCON' is the Elnode HTTP connection object. This method will
+be called automatically by Elnode.
+
 This method extracts the underlying JSON-RPC request and passes
 it to the underlying RPC layer, `json-rpc-server', to be
 executed. It then responds to the client with the result."
