@@ -403,7 +403,9 @@ Arguments:
 
 
 (defun porthole--end-400 (message)
-  "End processing of a handler and respond with a 400 response."
+  "End processing of a handler and respond with a 400 response.
+
+`MESSAGE' is the message to send in the content."
   (porthole--end-simple 400 "text/html" message))
 
 
