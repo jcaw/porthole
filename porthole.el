@@ -980,8 +980,8 @@ This reverses `porthole-expose-function'."
 (message "porthole: Disabling Elnode logging globally to prevent slowdown.")
 ;; This prevents logs from cluttering messages.
 (setq elnode-error-log-to-messages nil)
-;; TODO: Check if this is enough. How much logging will it take to slow down
-;;   Emacs? Do we need to disable all logging full stop?
+;; TODO: Is this enough? It will still log to a buffer. Is that too much? Do we
+;;   need to disable all logging full stop? Use for a while and see.
 ;; (setq elnode--do-error-logging nil)
 
 
