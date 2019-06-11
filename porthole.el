@@ -910,9 +910,9 @@ should be exposed.
 
   '(insert magit-status)
 
-Supply a symbol, not a string. Lambda
-functions are not allowed (there would be no way for the client
-to reference them by name)."
+Supply a symbol, not a string. Lambda functions are not
+allowed (there would be no way for the client to reference them
+by name)."
   (mapc (lambda (func)
           porthole-expose-function server-name func)
         functions))
