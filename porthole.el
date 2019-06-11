@@ -688,7 +688,9 @@ server's session file, which is accessible only to the user.
 
 If you would like more control over the server (for example,
 specifying the username, port or password) please refer to
-`porthole-start-server-advanced'.
+`porthole-start-server-advanced'. The documentation for that
+function also contains more information on how servers can be
+used.
 
 Arguments:
 
@@ -763,14 +765,14 @@ Arguments:
   this and the username are unspecified, no authentication will
   be used. Default: nil
 
-`:PUBLISH-PORT' - Whether to publish the server's port to the
+`:PUBLISH-PORT' - Whether to publish the port to the server's
+  session file. Default: t
+
+`:PUBLISH-USERNAME' - Whether to publish the username to the
   server's session file. Default: t
 
-`:PUBLISH-USERNAME' - Whether to publish the server's username to
-  the server's session file. Default: t
-
-`:PUBLISH-PASSWORD' - Whether to publish the server's password to
-  the server's session file. Default: t
+`:PUBLISH-PASSWORD' - Whether to publish the password to the
+  server's session file. Default: t
 
 `:EXPOSED-FUNCTIONS' - A list of functions to expose immediately
   upon server creation. See `porthole-expose-function' for more.
