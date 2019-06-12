@@ -146,19 +146,28 @@ If the call fails, the Porthole Python Client will raise a relevant error. Here'
 it looks like with error handling:
 
 ```python
-from emacs_porthole import call, PortholeConnectionError, JsonRpcError
+from emacs_porthole import (
+    call,
+    PortholeConnectionError,
+    MethodNotExposedError,
+    InternalMethodError,
+    TimeoutError
+)
 
 def sum_in_emacs():
     try:
         return call("pyrate-server", method="+", [1, 2, 3])
+    except TimeoutError:
+        print("The request timed out. Is Emacs busy?")
     except PortholeConnectionError:
-        # This happens when a connection to the server could not be made successfully.
-        print("Could not connect to the server.")
-    except JsonRpcError as e:
-        # This happens when a JSON-RPC response was returned, and it indicated
-        # an error. This normally means Emacs encountered an error executing
-        # the function.
-        print("A JSON-RPC Error was returned. Details:", e.json_rpc_error)
+        print("There was a problem connecting to the server. Is it running?")
+    except MethodNotExposedError:
+        print("The method wasn't exposed! Remember to expose it in the porthole server.")
+    except InternalMethodError as e:
+        # This will be raised when the function was executed, and raised an error during execution.
+        print("There was an error executing the method. Details:\n"
+              "error_type: {}\n".format(e.elisp_error_symbol)
+              "error_data: {}".format(e.elisp_error_data))
 ```
 
 ### Example 2: POSTing RPC Calls Directly
