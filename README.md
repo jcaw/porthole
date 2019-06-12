@@ -406,8 +406,8 @@ unknown, it will use the same method as Linux.
 ## What About Security?
 
 By default, servers run on private ports. They are only available to localhost.
-Because of how Emacs handles TCP connections, the port will be visible to all
-local users, but login credentials are only available to the current user.
+Because of how Emacs handles TCP connections, any user will be able to connect
+to the server, but login credentials are only available to the current user.
 
 ### Outside Localhost
 
