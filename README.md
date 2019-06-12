@@ -156,7 +156,7 @@ from emacs_porthole import (
 
 def sum_in_emacs():
     try:
-        return call("pyrate-server", method="+", [1, 2, 3])
+        return call("pyrate-server", method="+", params=[1, 2, 3])
     except TimeoutError:
         print("The request timed out. Is Emacs busy?")
     except PortholeConnectionError:
