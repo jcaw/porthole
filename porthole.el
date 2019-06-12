@@ -941,7 +941,7 @@ stop servers started by other packages."
           (porthole--alist-remove name-of-server porthole--running-servers))))
 
 
-(defun porthole--stop-server-safe (name-of-server &rest _)
+(defun porthole-stop-server-safe (name-of-server &rest _)
   "Like `porthole-stop-server', but this function will not raise errors.
 
 `NAME-OF-SERVER' is the name of the server to stop."
@@ -955,7 +955,7 @@ Their session information files will be cleaned up.
 
 This function is not intended to be used by the end-user. It
 should only be called when, for example, Emacs is closing."
-  (mapc 'porthole--stop-server-safe
+  (mapc 'porthole-stop-server-safe
         (porthole--running-server-names)))
 
 
