@@ -294,10 +294,11 @@ how to structure JSON-RPC requests for Emacs, see that package's
 
 ## Symbols & Keyword Arguments
 
-The JSON-RPC 2.0 only allows you to send certain datatypes. Porthole modifies
-this syntax to allow you to send Elisp symbols. You should send them as strings,
-but tag them like you would in Elisp code, e.g. `"'symbol"` or
-`"'another-symbol"`. Keyword arguments can be sent similarly: `":keyword"`, `":another-keyword"`
+The JSON-RPC 2.0 protocol only allows you to send certain datatypes. Porthole
+modifies this syntax to allow you to send Elisp symbols. You should send them as
+strings, but tag them like you would in Elisp code, e.g. `"'symbol"` or
+`"'another-symbol"`. Keyword arguments can be sent similarly: `":keyword"`,
+`":another-keyword"`
 
 In addition, because Elisp arguments are always positional (even keyword
 arguments are actually sent as a list), the standard JSON-RPC 2.0 method for
