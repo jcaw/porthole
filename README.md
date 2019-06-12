@@ -171,7 +171,7 @@ will have a known path).
 2. Send a POST request to `localhost:<port>` with the JSON-RPC 2.0 request
 encoded in the body.
 
-We'll write a client that works on Linux, in Python, using `requests` for our
+We'll write a client that works on Windows, in Python, using `requests` for our
 HTTP calls.
 
 **In Emacs**
