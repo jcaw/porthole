@@ -468,7 +468,13 @@ effort."
             (porthole--end-400 "Content could not be extracted from the request."))
           (let* ((exposed-functions (porthole--server-exposed-functions
                                      porthole-server))
-                 (porthole-response (jrpc-handle content exposed-functions)))
+                 (porthole-response
+                  ;; HACK: Elnode processes its requests in a temporary buffer.
+                  ;; We want to act on the buffer that *was* the buffer when
+                  ;; Emacs received the request. To do this, we have to manually
+                  ;; extract the previous buffer.
+                  (with-current-buffer (other-buffer (current-buffer) 1)
+                    (jrpc-handle content exposed-functions))))
             (porthole--end-success porthole-response))))
     ;; Catch unexpected errors.
     (error
