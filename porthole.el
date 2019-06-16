@@ -709,7 +709,7 @@ use it for manually configured servers.
 
 See `porthole-start-server' for more about starting servers."
   (unless (porthole-server-running-p name)
-    (porthole-start-server name :exposed-function exposed-functions))
+    (porthole-start-server name :exposed-functions exposed-functions))
   (porthole-expose-functions name exposed-functions))
 
 
