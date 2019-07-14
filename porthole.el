@@ -455,6 +455,9 @@ effort."
                   ;; We want to act on the buffer that *was* the buffer when
                   ;; Emacs received the request. To do this, we have to manually
                   ;; extract the previous buffer.
+                  ;;
+                  ;; TODO: Can we modify the entire previous buffer list here,
+                  ;; to remove the elnode buffer completely?
                   (with-current-buffer (other-buffer (current-buffer) 1)
                     (json-rpc-server-handle content exposed-functions))))
             (porthole--end-success porthole-response))))
