@@ -451,7 +451,12 @@ effort."
           (let* ((exposed-functions (porthole--server-exposed-functions
                                      porthole-server))
                  (porthole-response
-                  (json-rpc-server-handle content exposed-functions)))
+                  ;; HACK: Elnode processes its requests in a temporary buffer.
+                  ;; We want to act on the buffer that *was* the buffer when
+                  ;; Emacs received the request. To do this, we have to manually
+                  ;; extract the previous buffer.
+                  (with-current-buffer (other-buffer (current-buffer) 1)
+                    (json-rpc-server-handle content exposed-functions))))
             (porthole--end-success porthole-response))))
     ;; Catch unexpected errors.
     (error
