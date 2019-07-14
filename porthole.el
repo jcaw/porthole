@@ -450,7 +450,8 @@ effort."
             (porthole--end-400 "Content could not be extracted from the request."))
           (let* ((exposed-functions (porthole--server-exposed-functions
                                      porthole-server))
-                 (porthole-response (jrpc-handle content exposed-functions)))
+                 (porthole-response
+                  (json-rpc-server-handle content exposed-functions)))
             (porthole--end-success porthole-response))))
     ;; Catch unexpected errors.
     (error
