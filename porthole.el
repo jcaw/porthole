@@ -307,18 +307,14 @@ Arguments:
 
 Throws an error if no server could be found running on that
 port."
-  (catch 'server-found
-    ;; Check port against each running server
-    (mapc (lambda (server-pair)
-            (let* ((server (cdr server-pair))
-                   (server-port (porthole--server-port server)))
-              (when (eq port server-port)
-                ;; Server matches! Return it.
-                (throw 'server-found server))))
-          porthole--running-servers)
-    ;; No server was found. Raise an error.
-    (error "%s" (format "No `porthole--server' could be found running on port %s"
-                        port))))
+  (or (seq-find (lambda (server)
+                  (eq port (porthole--server-port server)))
+                ;; Iterate over only the server objects, not their keys.
+                (mapcar 'cdr porthole--running-servers)
+                nil)
+      ;; No server was found. Raise an error.
+      (error "%s" (format "No `porthole--server' could be found running on port %s"
+                          port))))
 
 
 (defun porthole--server-from-httpcon (httpcon)
