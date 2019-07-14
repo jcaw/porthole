@@ -5,8 +5,8 @@
 It is designed to leverage Python's nosetests.
 
 Do not run these tests directly. Use the provided elisp file,
-`test-porthole.el`. It contains a function which will set up an instance
-of the server and run these tests against it.
+`porthole-test-remote-calls.el`. It will set up a server instance and run these
+tests against it.
 
 """
 
