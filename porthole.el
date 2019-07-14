@@ -112,18 +112,6 @@ server."
   )
 
 
-(defconst porthole--on-linux (eq system-type 'gnu/linux)
-  "Is this instance of Emacs running on Linux?")
-
-
-(defconst porthole--on-windows (eq system-type 'windows-nt)
-  "Is this instance of Emacs running on Windows?")
-
-
-(defconst porthole--on-mac (eq system-type 'darwin)
-  "Is this instance of Emacs running on MacOS?")
-
-
 (defun porthole--get-linux-temp-dir ()
   "Get a user-only temp dir on Linux, to store the server info in."
   ;; If the runtime dir isn't available, fall back to the home dir.
@@ -138,19 +126,17 @@ server."
 
 
 (defconst porthole--base-temp-dir
-  (cond (porthole--on-linux
-         (porthole--get-linux-temp-dir))
-        (porthole--on-windows
-         (getenv "TEMP"))
-        (porthole--on-mac
-         (substitute-in-file-name "$HOME/Library/"))
-        (t
-         ;; Use the same method as Linux on unknown systems.
-         (display-warning
-          "porthole"
-          (concat "Unrecognised system type. Don't know where to find the "
-                  "temp directory. Using the same method as Linux."))
-         (porthole--get-linux-temp-dir)))
+  (pcase system-type
+    ('gnu/linux (porthole--get-linux-temp-dir))
+    ('windows-nt (getenv "TEMP"))
+    ('darwin (substitute-in-file-name "$HOME/Library/"))
+    (_
+     ;; Use the same method as Linux on unknown systems.
+     (display-warning
+      "porthole"
+      (concat "Unrecognised system type. Don't know where to find the "
+              "temp directory. Using the same method as Linux."))
+     (porthole--get-linux-temp-dir)))
   "The base temp directory to use.
 
 This will be dependent on the current system.")
