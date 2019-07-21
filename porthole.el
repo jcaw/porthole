@@ -1032,7 +1032,7 @@ This reverses `porthole-expose-function'."
 
 
 ;; Ensure all servers are stopped when Emacs is closed.
-(add-hook 'kill-emacs-hook 'porthole--stop-all-servers)
+(add-hook #'kill-emacs-hook 'porthole--stop-all-servers)
 
 
 ;; Elnode is very chatty. It logs a lot but it provides no mechanism to turn off
