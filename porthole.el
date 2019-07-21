@@ -231,9 +231,9 @@ Returns a new alist without those elements."
   ;; Make 400 random int strings, join them, then hash the result. That should
   ;; be suitably unique.
   (let ((long-random-number
-         (apply 'concat (mapcar (lambda (_)
-                                  (format "%s" (random 9999999999999)))
-                                (number-sequence 0 400)))))
+         (apply #'concat (mapcar (lambda (_)
+                                   (format "%s" (random 9999999999999)))
+                                 (number-sequence 0 400)))))
     (secure-hash 'sha256 long-random-number)))
 
 
