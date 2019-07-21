@@ -4,7 +4,7 @@
 
 ;; Author:  GitHub user "Jcaw"
 ;; URL: https://github.com/jcaw/porthole
-;; Version: 0.2.4
+;; Version: 0.2.5
 ;; Keywords: comm, rpc, http, json
 ;; Package-Requires: ((emacs "26") (elnode "0.9.9.8") (f "0.19.0") (json-rpc-server "0.1.2"))
 
