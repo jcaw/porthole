@@ -507,7 +507,7 @@ The details of the response should be specified in
 `porthole--end'.
 
 `HTTPCON' is the Elnode HTTP connection object."
-  (apply 'elnode-http-start
+  (apply #'elnode-http-start
          (append (list httpcon)
                  (list (alist-get 'response-code response-alist))
                  (alist-get 'headers response-alist)))
