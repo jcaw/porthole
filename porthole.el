@@ -946,8 +946,10 @@ Their session information files will be cleaned up.
 
 This function is not intended to be used by the end-user. It
 should only be called when, for example, Emacs is closing."
-  (mapc 'porthole-stop-server-safe
-        (porthole--running-server-names)))
+  ;; Ignore errors just in case. Don't want to block Emacs from exiting.
+  (ignore-errors
+    (mapc 'porthole-stop-server-safe
+          (porthole--running-server-names))))
 
 
 (defun porthole-expose-functions (name-of-server funcs)
