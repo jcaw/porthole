@@ -874,7 +874,7 @@ Returns the port that was assigned to the server."
         ;; condition occurring 500 times is infinitesimally small.
         (max-attempts 500))
     (unless (catch 'server-started
-              (dotimes (i max-attempts)
+              (dotimes (_ max-attempts)
                 (setq assigned-port (porthole--find-free-port "localhost"))
                 (condition-case nil
                     ;; Try and start the server with these parameters.
