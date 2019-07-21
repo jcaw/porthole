@@ -310,7 +310,7 @@ port."
   (or (seq-find (lambda (server)
                   (eq port (porthole--server-port server)))
                 ;; Iterate over only the server objects, not their keys.
-                (mapcar 'cdr porthole--running-servers)
+                (mapcar #'cdr porthole--running-servers)
                 nil)
       ;; No server was found. Raise an error.
       (error "%s" (format "No `porthole--server' could be found running on port %s"
