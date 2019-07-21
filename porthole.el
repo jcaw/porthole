@@ -620,7 +620,7 @@ An error will be raised if `SYMBOL' is not a symbol."
 
 (defun porthole--running-server-names ()
   "Get the names of all running servers."
-  (mapcar 'car porthole--running-servers))
+  (mapcar #'car porthole--running-servers))
 
 
 ;;;###autoload
