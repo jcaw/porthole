@@ -834,6 +834,9 @@ Arguments:
       (unless (elnode-start
                'porthole--handle-request
                :port port
+               ;; TODO: The client targets 127.0.0.1 directly now, doesn't use
+               ;;   the name localhost (to avoid slow resolution if it tries
+               ;;   ipv6 first). Maybe cover that here?
                :host "localhost")
         (error "The Elnode server was not started. Reason unknown"))
       (setq assigned-port port))
