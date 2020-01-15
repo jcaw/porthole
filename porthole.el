@@ -4,7 +4,7 @@
 
 ;; Author:  GitHub user "Jcaw"
 ;; URL: https://github.com/jcaw/porthole
-;; Version: 0.2.2
+;; Version: 0.2.5
 ;; Keywords: comm, rpc, http, json
 ;; Package-Requires: ((emacs "26") (elnode "0.9.9.8") (f "0.19.0") (json-rpc-server "0.1.2"))
 
@@ -112,18 +112,6 @@ server."
   )
 
 
-(defconst porthole--on-linux (eq system-type 'gnu/linux)
-  "Is this instance of Emacs running on Linux?")
-
-
-(defconst porthole--on-windows (eq system-type 'windows-nt)
-  "Is this instance of Emacs running on Windows?")
-
-
-(defconst porthole--on-mac (eq system-type 'darwin)
-  "Is this instance of Emacs running on MacOS?")
-
-
 (defun porthole--get-linux-temp-dir ()
   "Get a user-only temp dir on Linux, to store the server info in."
   ;; If the runtime dir isn't available, fall back to the home dir.
@@ -138,19 +126,17 @@ server."
 
 
 (defconst porthole--base-temp-dir
-  (cond (porthole--on-linux
-         (porthole--get-linux-temp-dir))
-        (porthole--on-windows
-         (getenv "TEMP"))
-        (porthole--on-mac
-         (substitute-in-file-name "$HOME/Library/"))
-        (t
-         ;; Use the same method as Linux on unknown systems.
-         (display-warning
-          "porthole"
-          (concat "Unrecognised system type. Don't know where to find the "
-                  "temp directory. Using the same method as Linux."))
-         (porthole--get-linux-temp-dir)))
+  (pcase system-type
+    ('gnu/linux (porthole--get-linux-temp-dir))
+    ('windows-nt (getenv "TEMP"))
+    ('darwin (substitute-in-file-name "$HOME/Library/"))
+    (_
+     ;; Use the same method as Linux on unknown systems.
+     (display-warning
+      "porthole"
+      (concat "Unrecognised system type. Don't know where to find the "
+              "temp directory. Using the same method as Linux."))
+     (porthole--get-linux-temp-dir)))
   "The base temp directory to use.
 
 This will be dependent on the current system.")
@@ -245,9 +231,9 @@ Returns a new alist without those elements."
   ;; Make 400 random int strings, join them, then hash the result. That should
   ;; be suitably unique.
   (let ((long-random-number
-         (apply 'concat (mapcar (lambda (_)
-                                  (format "%s" (random 9999999999999)))
-                                (number-sequence 0 400)))))
+         (apply #'concat (mapcar (lambda (_)
+                                   (format "%s" (random 9999999999999)))
+                                 (number-sequence 0 400)))))
     (secure-hash 'sha256 long-random-number)))
 
 
@@ -321,18 +307,14 @@ Arguments:
 
 Throws an error if no server could be found running on that
 port."
-  (catch 'server-found
-    ;; Check port against each running server
-    (mapc (lambda (server-pair)
-            (let* ((server (cdr server-pair))
-                   (server-port (porthole--server-port server)))
-              (when (eq port server-port)
-                ;; Server matches! Return it.
-                (throw 'server-found server))))
-          porthole--running-servers)
-    ;; No server was found. Raise an error.
-    (error "%s" (format "No `porthole--server' could be found running on port %s"
-                        port))))
+  (or (seq-find (lambda (server)
+                  (eq port (porthole--server-port server)))
+                ;; Iterate over only the server objects, not their keys.
+                (mapcar #'cdr porthole--running-servers)
+                nil)
+      ;; No server was found. Raise an error.
+      (error "%s" (format "No `porthole--server' could be found running on port %s"
+                          port))))
 
 
 (defun porthole--server-from-httpcon (httpcon)
@@ -468,7 +450,16 @@ effort."
             (porthole--end-400 "Content could not be extracted from the request."))
           (let* ((exposed-functions (porthole--server-exposed-functions
                                      porthole-server))
-                 (porthole-response (jrpc-handle content exposed-functions)))
+                 (porthole-response
+                  ;; HACK: Elnode processes its requests in a temporary buffer.
+                  ;; We want to act on the buffer that *was* the buffer when
+                  ;; Emacs received the request. To do this, we have to manually
+                  ;; extract the previous buffer.
+                  ;;
+                  ;; TODO: Can we modify the entire previous buffer list here,
+                  ;; to remove the elnode buffer completely?
+                  (with-current-buffer (other-buffer (current-buffer) 1)
+                    (json-rpc-server-handle content exposed-functions))))
             (porthole--end-success porthole-response))))
     ;; Catch unexpected errors.
     (error
@@ -516,7 +507,7 @@ The details of the response should be specified in
 `porthole--end'.
 
 `HTTPCON' is the Elnode HTTP connection object."
-  (apply 'elnode-http-start
+  (apply #'elnode-http-start
          (append (list httpcon)
                  (list (alist-get 'response-code response-alist))
                  (alist-get 'headers response-alist)))
@@ -629,7 +620,7 @@ An error will be raised if `SYMBOL' is not a symbol."
 
 (defun porthole--running-server-names ()
   "Get the names of all running servers."
-  (mapcar 'car porthole--running-servers))
+  (mapcar #'car porthole--running-servers))
 
 
 ;;;###autoload
@@ -886,7 +877,7 @@ Returns the port that was assigned to the server."
         ;; condition occurring 500 times is infinitesimally small.
         (max-attempts 500))
     (unless (catch 'server-started
-              (dotimes (i max-attempts)
+              (dotimes (_ max-attempts)
                 (setq assigned-port (porthole--find-free-port "localhost"))
                 (condition-case nil
                     ;; Try and start the server with these parameters.
@@ -958,8 +949,10 @@ Their session information files will be cleaned up.
 
 This function is not intended to be used by the end-user. It
 should only be called when, for example, Emacs is closing."
-  (mapc 'porthole-stop-server-safe
-        (porthole--running-server-names)))
+  ;; Ignore errors just in case. Don't want to block Emacs from exiting.
+  (ignore-errors
+    (mapc 'porthole-stop-server-safe
+          (porthole--running-server-names))))
 
 
 (defun porthole-expose-functions (name-of-server funcs)
@@ -1042,7 +1035,7 @@ This reverses `porthole-expose-function'."
 
 
 ;; Ensure all servers are stopped when Emacs is closed.
-(add-hook 'kill-emacs-hook 'porthole--stop-all-servers)
+(add-hook 'kill-emacs-hook #'porthole--stop-all-servers)
 
 
 ;; Elnode is very chatty. It logs a lot but it provides no mechanism to turn off
