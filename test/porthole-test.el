@@ -1,7 +1,6 @@
 ;;; porthole-test.el --- Tests for porthole
 
 
-(require 'elnode)
 (require 'cl-lib)
 (require 'f)
 (require 'json)
@@ -75,52 +74,6 @@
                  nil))
   (should (equal (porthole--alist-remove 'key1 '((key2 . value2)))
                  '((key2 . value2))))
-  )
-
-
-(ert-deftest test-porthole--authenticate ()
-  "Test for `porthole--authenticate'"
-  (let ((test-server (make-porthole--server
-                      :username "test_username"
-                      :password "test_password")))
-    ;; Successful authentication
-    (should (catch 'porthole-finish-handling
-              ;; This should simply run without problems
-              (porthole--authenticate '((username . "test_username")
-                                        (password . "test_password"))
-                                      test-server)
-              'did-not-catch))
-    ;; Wrong username and password
-    (should (catch 'porthole-finish-handling
-              ;; Should terminate early because the authentication was invalid
-              (porthole--authenticate '((username . "wrong")
-                                        (password . "wrong"))
-                                      test-server)
-              ;; Should not reach here
-              nil))
-    ;; Just wrong password
-    (should (catch 'porthole-finish-handling
-              ;; Should terminate early because the authentication was invalid
-              (porthole--authenticate '((username . "test_username")
-                                        (password . "wrong"))
-                                      test-server)
-              ;; Should not reach here
-              nil))
-    ;; Just wrong username
-    (should (catch 'porthole-finish-handling
-              ;; Should terminate early because the authentication was invalid
-              (porthole--authenticate '((username . "wrong")
-                                        (password . "test_password"))
-                                      test-server)
-              ;; Should not reach here
-              nil))
-    ;; No username or password
-    (should (catch 'porthole-finish-handling
-              ;; Should terminate early because the authentication was invalid
-              (porthole--authenticate '()
-                                      test-server)
-              ;; Should not reach here
-              nil)))
   )
 
 

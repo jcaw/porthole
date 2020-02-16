@@ -6,7 +6,7 @@
 ;; URL: https://github.com/jcaw/porthole
 ;; Version: 0.2.5
 ;; Keywords: comm, rpc, http, json
-;; Package-Requires: ((emacs "26") (elnode "0.9.9.8") (f "0.19.0") (json-rpc-server "0.1.2"))
+;; Package-Requires: ((emacs "26") (web-server "0.1.2") (f "0.19.0") (json-rpc-server "0.1.2"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -68,9 +68,9 @@
 
 
 (require 'cl-lib)
-(require 'elnode)
 (require 'f)
 (require 'json-rpc-server)
+(require 'web-server)
 
 
 (defgroup porthole nil
@@ -93,23 +93,23 @@ objects.")
 
 
 (cl-defstruct porthole--server
-  "Struct representing a Porthole server.
-
-This struct is intended to be used as a record of a running RPC
-server."
+  "Struct representing a running Porthole server."
   (name nil
         :read-only t
         :type string)
-  (port nil
-        :read-only t)
   (exposed-functions '())
   (username nil
             :read-only t)
   (password nil
             :read-only t)
-  (elnode-process nil
-                  :read-only t)
+  (ws-server nil
+             :read-only t)
   )
+
+
+(defun porthole--server-port (server)
+  "Get the port a `porthole--server' is running on."
+  (oref (porthole--server-ws-server server) port))
 
 
 (defun porthole--get-linux-temp-dir ()
@@ -237,107 +237,6 @@ Returns a new alist without those elements."
     (secure-hash 'sha256 long-random-number)))
 
 
-(defun porthole--extract-content (httpcon)
-  "Extract the body of an HTTP request.
-
-Ordinarily, Elnode provides no method to extract the raw content
-from an HTTP request. This is an extension function to allow
-this.
-
-This is ripped from `elnode--http-post-to-alist', extracted into
-its own function to enable custom body handling.
-
-`HTTPCON' is the Elnode connection object."
-  (with-current-buffer (process-buffer httpcon)
-    (buffer-substring
-     ;; we might have to add 2 to this because of trailing \r\n
-     (process-get httpcon :elnode-header-end)
-     (point-max))))
-
-
-(defun porthole--authenticate (headers porthole-server)
-  "Ensure a request has valid authentication.
-
-If not, a 401 response trigger will be thrown.
-
-Arguments:
-
-`HEADERS' - an alist of an Elnode `httpcon' object's headers.
-
-`PORTHOLE-SERVER' - the name of the server to check against."
-  (let ((target-username (porthole--server-username porthole-server))
-        (target-password (porthole--server-password porthole-server)))
-    ;; Only perform authentication when a username or password are required.
-    ;; Otherwise, it's authenticated by default.
-    (when (or target-username target-password)
-      (let ((authorization (porthole--alist-get "Authorization" headers)))
-        (unless authorization
-          (porthole--end-unauthenticated "authentication required"))
-        ;; The code below that actually parses the authorization header is
-        ;; ripped from `web-server.el' by Eric Schulte. See the method
-        ;; `ws-parse' for more information.
-        (string-match "\\([^[:space:]]+\\) \\(.*\\)$" authorization)
-        (let ((protocol (match-string 1 authorization))
-              (credentials (match-string 2 authorization)))
-          (unless protocol
-            (porthole--end-400 "Invalid authorization string"))
-          (unless credentials
-            (porthole--end-400 "No credentials provided"))
-          (unless (porthole--case-insensitive-comparison
-                   protocol "basic")
-            ;; If they've supplied the wrong protocol, just tell them
-            ;; authentication is required.
-            (porthole--end-unauthenticated "authentication required"))
-          (let ((decoded-credentials (base64-decode-string credentials)))
-            ;; `integerp' because we might match at position 0.
-            (if (integerp (string-match ":" decoded-credentials))
-                (let ((provided-username (substring decoded-credentials 0
-                                                    (match-beginning 0)))
-                      (provided-password (substring decoded-credentials
-                                                    (match-end 0))))
-                  (unless (and (equal provided-username target-username)
-                               (equal provided-password target-password))
-                    (porthole--end-unauthenticated "invalid credentials")))
-              (porthole--end-400 (format "bad credentials: \"%s\""
-                                         decoded-credentials)))))))))
-
-
-(defun porthole--server-from-port (port)
-  "Get the `porthole--server' object running on `PORT'.
-
-Throws an error if no server could be found running on that
-port."
-  (or (seq-find (lambda (server)
-                  (eq port (porthole--server-port server)))
-                ;; Iterate over only the server objects, not their keys.
-                (mapcar #'cdr porthole--running-servers)
-                nil)
-      ;; No server was found. Raise an error.
-      (error "%s" (format "No `porthole--server' could be found running on port %s"
-                          port))))
-
-
-(defun porthole--server-from-httpcon (httpcon)
-  "Get the `porthole--server' that this `HTTPCON' is connecting to.
-
-Returns a `porthole--server' object.
-
-Throws an error if no object could be found."
-  ;; We get the underlying Elnode server that's serving the connection, then we
-  ;; get the `porthole--server' from that.
-  ;;
-  ;; We use the port as the key to extract the `porthole--server'. Why introduce the
-  ;; extra step? Why not use the Elnode server as the key? Well, ports are
-  ;; probably more robust. What if Elnode restarted its server for some reason,
-  ;; such as rebooting after a fatal error? The ports should still match, even
-  ;; if the servers don't.
-  (or (porthole--server-from-port
-       (let ((underlying-elnode-server (process-get httpcon :server)))
-         (process-contact underlying-elnode-server :service)))
-      ;; Block if no server found. Should never get here but just in case.
-      (error "%s" "No `porthole--server' could be found for `HTTPCON'")))
-
-
 (defun porthole--end (response-code
                       headers
                       content)
@@ -421,97 +320,88 @@ response containing a JSON object that encapsulated this error."
                                        (data ,(cdr err))))))))
 
 
-(defun porthole--end-error-no-info ()
-  "End the handler with a 500. Do not share error information with the client."
-  (porthole--end-simple 500 "application/json"
-                        (json-encode
-                         `((details . :json-null)))))
+(defun porthole--get-ws-header (header-key headers)
+  "Get a specific header from the `web-server' `HEADERS'.
+
+`header-key' should be the elisp key for the header - it will be
+all caps, e.g. `:CONTENT-TYPE'."
+  (cdr (assoc header-key headers)))
 
 
-(defun porthole--handle-authenticated (httpcon headers porthole-server)
-  "Handle a request, after it's been authenticated.
-
-The authentication process requires the `HEADERS' and the
-`PORTHOLE-SERVER' to be extracted from the Elnode `HTTPCON'
-object. Pass these down to this function to avoid duplication of
-effort."
-  (condition-case-unless-debug err
-      (let ((content-type (porthole--alist-get "Content-Type" headers)))
-        (unless content-type
-          (porthole--end-400 "No `Content-Type` provided."))
-        (unless (porthole--case-insensitive-comparison
-                 (format "%s" content-type)
-                 "application/json")
-          (porthole--end-400
-           (format "`Content-Type` should be application/json. Was: %s"
-                   content-type)))
-        (let ((content (porthole--extract-content httpcon)))
-          (unless content
-            (porthole--end-400 "Content could not be extracted from the request."))
-          (let* ((exposed-functions (porthole--server-exposed-functions
-                                     porthole-server))
-                 (porthole-response
-                  ;; HACK: Elnode processes its requests in a temporary buffer.
-                  ;; We want to act on the buffer that *was* the buffer when
-                  ;; Emacs received the request. To do this, we have to manually
-                  ;; extract the previous buffer.
-                  ;;
-                  ;; TODO: Can we modify the entire previous buffer list here,
-                  ;; to remove the elnode buffer completely?
-                  (with-current-buffer (other-buffer (current-buffer) 1)
-                    (json-rpc-server-handle content exposed-functions))))
-            (porthole--end-success porthole-response))))
-    ;; Catch unexpected errors.
-    (error
-     ;; Since the user is authenticated, we can share information about the
-     ;; underlying error with the client.
-     (porthole--end-error-with-info err))))
+(defun porthole--server-from-port (port)
+  (catch 'server-found
+    (mapc (lambda (server-pair)
+            (let ((server-struct (cdr server-pair)))
+              (when (= port (porthole--server-port server-struct))
+                (throw 'server-found server-struct))))
+          porthole--running-servers)
+    (throw 'server-found nil)))
 
 
-(defun porthole--handle-request (httpcon)
-  "Handle a JSON-RPC request.
+(defun porthole--ws-server-from-request (request)
+  (plist-get (process-contact (oref request process) :plist)
+             :server))
 
-`HTTPCON' is the Elnode HTTP connection object. This method will
-be called automatically by Elnode.
 
-This method extracts the underlying JSON-RPC request and passes
-it to the underlying RPC layer, `json-rpc-server', to be
-executed. It then responds to the client with the result."
+(defun porthole--server-from-request (request)
+  (porthole--server-from-port
+   ;; TODO: Pattern used twice. Extract it.
+   (process-contact
+    (oref (porthole--ws-server-from-request request) process)
+    :service)))
+
+
+(defun porthole--handle (request)
+  "Handle a request.
+
+Note this assumes the request has already been authenticated."
+  ;; TODO: Document for `web-server'
+  ;; TODO: Audit comments now we've removed the auth method
   (porthole--respond
-   httpcon
+   request
    (catch 'porthole-finish-handling
-     ;; Don't catch errors when debugging, so we can trigger the debugger.
-     ;;
-     ;; Note that this will cause the connection with the client to terminate
-     ;; unexpectedly.
-     ;;
-     ;; TODO: Take a second look. Should debugging follow the method in
-     ;;   `json-rpc-server'?
-     (condition-case-unless-debug nil
-         (let ((headers (elnode-http-headers httpcon))
-               (porthole-server (porthole--server-from-httpcon httpcon)))
-           ;; Authenticate first
-           (porthole--authenticate headers porthole-server)
-           (porthole--handle-authenticated httpcon headers porthole-server))
+     (condition-case-unless-debug err
+         (with-slots (body headers) request
+           (let ((content-type (porthole--get-ws-header :CONTENT-TYPE headers)))
+             (unless content-type
+               (porthole--end-400 "No `Content-Type` provided."))
+             (unless (porthole--case-insensitive-comparison
+                      (format "%s" content-type)
+                      "application/json")
+               (porthole--end-400
+                (format "`Content-Type` should be application/json. Was: %s"
+                        content-type))))
+           (let* ((server (porthole--server-from-request request))
+                  (exposed-functions (porthole--server-exposed-functions
+                                      server))
+                  (porthole-response
+                   (json-rpc-server-handle body exposed-functions)))
+             (porthole--end-success porthole-response)))
        ;; Catch unexpected errors.
        (error
-        ;; Before authentication, we send no details about the internal error.
-        (porthole--end-error-no-info))))))
+        ;; Since the user is authenticated, we can share information about the
+        ;; underlying error with the client.
+        (porthole--end-error-with-info err))))))
 
 
-(defun porthole--respond (httpcon response-alist)
+(defun porthole--respond (request response-alist)
   "Send a response to an HTTP request.
 
 The details of the response should be specified in
 `RESPONSE-ALIST'. This should be an alist thrown by
-`porthole--end'.
-
-`HTTPCON' is the Elnode HTTP connection object."
-  (apply #'elnode-http-start
-         (append (list httpcon)
-                 (list (alist-get 'response-code response-alist))
-                 (alist-get 'headers response-alist)))
-  (elnode-http-return httpcon (alist-get 'content response-alist)))
+`porthole--end'."
+  ;; TODO: Document `request'
+  (with-slots (process) request
+    (apply (append (list #'ws-response-header
+                         process
+                         (alist-get 'response-code response-alist))
+                   (alist-get 'headers response-alist)))
+    ;; TODO: Yuck. Formalize.
+    (ws-send process (alist-get 'content response-alist))
+    ;; TODO: Try out closing overtly?
+    ;; Tell `web-server' to close the connection.
+    ;; (throw 'close-connection nil)
+    ))
 
 
 (defun porthole--find-free-port (host)
@@ -810,39 +700,17 @@ Arguments:
   (porthole--assert-server-not-running name-of-server)
   ;; Every function name should be a symbol.
   (mapc 'porthole--assert-symbol exposed-functions)
-  (let ((assigned-port))
-    ;; We have to handle dynamic ports differently.
-    (if (member port '("0" 0 t))
-        (setq assigned-port (porthole--start-on-dynamic-port))
-      ;; TODO: Maybe explicitly check to see if this port is free across the
-      ;; board?
-      (when (alist-get port elnode-server-socket)
-        ;; Have to manually check that Elnode doesn't have a server on this port,
-        ;; because it will fail silently otherwise.
-        (error "Elnode already has a server running on this port"))
-      ;; TODO: Find some way to name the server process so it doesn't have a
-      ;;   generic Elnode name and looks like a porthole server?
-      (unless (elnode-start
-               'porthole--handle-request
-               :port port
-               ;; TODO: The client targets 127.0.0.1 directly now, doesn't use
-               ;;   the name localhost (to avoid slow resolution if it tries
-               ;;   ipv6 first). Maybe cover that here?
-               :host "localhost")
-        (error "The Elnode server was not started. Reason unknown"))
-      (setq assigned-port port))
+  (let* ((ws-server (porthole--start-ws-server port username password))
+         (assigned-port (oref ws-server port)))
     ;; If we've reached this point, the Elnode server has started successfully.
     ;; Now create a `porthole--server' object to wrap up all the server
     ;; information and push it onto the list.
     (push (cons name-of-server (make-porthole--server
-                             :name name-of-server
-                             :port assigned-port
-                             :username username
-                             :password password
-                             :exposed-functions exposed-functions
-                             ;; We store the actual Elnode server process too, in case we
-                             ;; wish to query it directly.
-                             :elnode-process (alist-get port elnode-server-socket)))
+                                :name name-of-server
+                                :username username
+                                :password password
+                                :exposed-functions exposed-functions
+                                :ws-server ws-server))
           porthole--running-servers)
     (message "porthole: RPC server \"%s\" running on port %s"
              name-of-server assigned-port)
@@ -854,56 +722,41 @@ Arguments:
     name-of-server))
 
 
-(defun porthole--start-on-dynamic-port ()
-  "Start an underlying Elnode server on a dynamic port.
+(defun porthole--actual-ws-port (ws-server-)
+  "Get the actual port a `ws-server' is running on.
 
-This requires a different approach to starting on a specific
-port. See the comments in this method for details. Please note,
-this is an internal method intended for
-`porthole-start-server-advanced'.
+By default, `ws-server' objects store the port which was given as
+input to create the server. This may not actually be the port the
+server is running on. For example, if a server was created with
+dynamic port allocation, the `ws-server' object may have the port
+stored as \"0\" or t - even though the network process was
+allocated a specific port.
 
-Returns the port that was assigned to the server."
-  ;; Please note, this CAN PRODUCE A RACE CONDITION if the port is grabbed
-  ;; between this check and starting the server.
-  ;;
-  ;; This is necessary because Elnode stores a server started on port 0,
-  ;; in... The port 0 slot. So you can only start one server on port 0.
-  ;; Rather than modifying the underlying Elnode dictionary (Elnode might
-  ;; change its structure), we pre-allocate a specific port.
-  ;;
-  ;; Because this can produce a race condition, we try multiple times.
-  (let (assigned-port
-        ;; Try to claim a dynamic port this many times. The chance of the race
-        ;; condition occurring 500 times is infinitesimally small.
-        (max-attempts 500))
-    (unless (catch 'server-started
-              (dotimes (_ max-attempts)
-                (setq assigned-port (porthole--find-free-port "localhost"))
-                (condition-case nil
-                    ;; Try and start the server with these parameters.
-                    ;;
-                    ;; If the port is taken, it will throw a file-error. If
-                    ;; Elnode already has a server running on this port (it
-                    ;; shouldn't, but just in case), the server creation
-                    ;; process will fail silently, and return nil. Handle
-                    ;; both cases.
-                    (when (elnode-start
-                           'porthole--handle-request
-                           :port assigned-port
-                           :host "localhost")
-                      ;; If the server was started successfully, we're done. We
-                      ;; have a server - break out and continue.
-                      (throw 'server-started t))
-                  (file-error nil))
-                ;; The server wasn't started succesfully - try again
-                (throw 'server-started nil)))
-      ;; If the server could not be started after many retries, we just raise an error.
-      (error "%s" (format (concat
-                           "Tried to start on a free port %s times."
-                           " Failed each time. Server could not be started")
-                          max-attempts)))
-    ;; Return the assigned port
-    assigned-port))
+This method bypasses the flawed `ws-server' implementation and
+extract the actual port from the underlying network process."
+  (process-contact (oref ws-server- process) :service))
+
+
+(defun porthole--start-ws-server (port username password &optional log)
+  ;; FIXME: Authentication not working.
+  (let ((server (ws-start (ws-with-authentication
+                           'porthole--handle
+                           ;; List of valid users, each as a cons cell.
+                           `((,username . ,password)))
+                          port
+                          log
+                          :nowait t
+                          ;; Raise an error when we attempt to re-use a port
+                          ;; Emacs has already taken (this may only be necessary
+                          ;; on Windows).
+                          ;;
+                          ;; TODO: Add a test for this.
+                          :reuseaddr nil)))
+    ;; `web-server' stores the port supplied, not the port assigned. Fix this
+    ;; for dynamic ports.
+    (when (member port '(0 "0" t))
+      (oset server port (porthole--actual-ws-port server)))
+    server))
 
 
 (defun porthole-stop-server (name-of-server)
@@ -919,20 +772,12 @@ stop servers started by other packages."
   ;; isn't running.
   (porthole--erase-session-file name-of-server)
   (porthole--assert-server-running name-of-server)
-  (let* ((server (porthole-get-server name-of-server))
-         (port (porthole--server-port server)))
-    ;; Stop the actual HTTP process
-    (elnode-stop port)
-    ;; Elnode will message stuff here that might be misleading - explain it
-    ;; explicitly.
-    (message
-     (concat "porthole: Please ignore any messages that say \"found the "
-             "server process - NOT deleting\" - this is just logging from "
-             "Elnode (it can't be suppressed)."))
-    (message "Porthole server \"%s\" stopped." name-of-server)
-    ;; Remove the server from the list of running servers.
-    (setq porthole--running-servers
-          (porthole--alist-remove name-of-server porthole--running-servers))))
+  ;; Stop the actual HTTP process
+  (ws-stop (porthole--server-ws-server (porthole-get-server name-of-server)))
+  (message "Porthole server \"%s\" stopped." name-of-server)
+  ;; Remove the server from the list of running servers.
+  (setq porthole--running-servers
+        (porthole--alist-remove name-of-server porthole--running-servers)))
 
 
 (defun porthole-stop-server-safe (name-of-server &rest _)
@@ -1036,17 +881,6 @@ This reverses `porthole-expose-function'."
 
 ;; Ensure all servers are stopped when Emacs is closed.
 (add-hook 'kill-emacs-hook #'porthole--stop-all-servers)
-
-
-;; Elnode is very chatty. It logs a lot but it provides no mechanism to turn off
-;; logging for a specific server. The only way to turn it off is to disable it
-;; globally.
-(message "porthole: Disabling Elnode logging globally to prevent slowdown.")
-;; This prevents logs from cluttering messages.
-(setq elnode-error-log-to-messages nil)
-;; TODO: Is this enough? It will still log to a buffer. Is that too much? Do we
-;;   need to disable all logging full stop? Use for a while and see.
-;; (setq elnode--do-error-logging nil)
 
 
 (provide 'porthole)
