@@ -781,7 +781,7 @@ stop servers started by other packages."
 
 
 (defun porthole-stop-server-safe (name-of-server &rest _)
-  "Like `porthole-stop-server', but this function will not raise errors.
+  "Like `porthole-stop-server', but errors are suppressed.
 
 `NAME-OF-SERVER' is the name of the server to stop."
   (ignore-errors (porthole-stop-server name-of-server)))
