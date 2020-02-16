@@ -26,7 +26,7 @@ TEST_HOST = "localhost"
 # Get the temp dir to use, depending on the platform.
 system = platform.system()
 if system.lower() == "windows":
-    temp_dir = os.environ("TEMP")
+    temp_dir = os.environ.get("TEMP")
 elif system.lower() == "linux":
     temp_dir = os.environ.get("XDG_RUNTIME_DIR") or os.environ.get("HOME")
     if not temp_dir:
