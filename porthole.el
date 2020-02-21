@@ -391,17 +391,23 @@ The details of the response should be specified in
 `RESPONSE-ALIST'. This should be an alist thrown by
 `porthole--end'."
   ;; TODO: Document `request'
+  ;; TODO: Yuck. Formalize.
   (with-slots (process) request
-    (apply (append (list #'ws-response-header
-                         process
-                         (alist-get 'response-code response-alist))
-                   (alist-get 'headers response-alist)))
-    ;; TODO: Yuck. Formalize.
-    (ws-send process (alist-get 'content response-alist))
-    ;; TODO: Try out closing overtly?
-    ;; Tell `web-server' to close the connection.
-    ;; (throw 'close-connection nil)
-    ))
+    (condition-case nil
+        (progn
+          ;; FIXME: Only ever fails sending the second half. Header always seems
+          ;;   to succeed.
+          (apply (append (list #'ws-response-header
+                               process
+                               (alist-get 'response-code response-alist))
+                         (alist-get 'headers response-alist)))
+          (ws-send process (alist-get 'content response-alist))
+          ;; TODO: Try out closing overtly?
+          ;; Tell `web-server' to close the connection.
+          ;; (throw 'close-connection nil)
+          )
+    ;; Don't interrupt user when fail to write to the process.
+    (file-error nil))))
 
 
 (defun porthole--find-free-port (host)
