@@ -461,7 +461,5 @@ Do you have a client? Make a pull request to add it to the list!
 
 - <b>Can I run multiple servers?</b> Yes. Porthole is designed to allow packages
   to build their own RPC system, without worrying about other packages.
-- <b>Is there support planned for other protocols than JSON-RPC?</b> It should  
-  be easy to add, but it is no longer a planned feature.
 - <b>Do you accept pull requests?</b> Yes! If you like, you can open an issue
   first to discuss ideas.
